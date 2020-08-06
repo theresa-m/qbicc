@@ -27,18 +27,18 @@ final class FieldContainerImpl implements FieldContainer {
     }
 
     @Override
-    public JavaObject getObjectPlain(int index) {
-        return (JavaObject) objects.getPlain(index);
+    public Object getObjectPlain(int index) {
+        return objects.getPlain(index);
     }
 
     @Override
-    public JavaObject getObjectVolatile(int index) {
-        return (JavaObject) objects.get(index);
+    public Object getObjectVolatile(int index) {
+        return objects.get(index);
     }
 
     @Override
-    public JavaObject getObjectAcquire(int index) {
-        return (JavaObject) objects.getAcquire(index);
+    public Object getObjectAcquire(int index) {
+        return objects.getAcquire(index);
     }
 
     @Override
@@ -72,17 +72,17 @@ final class FieldContainerImpl implements FieldContainer {
     }
 
     @Override
-    public void setObjectPlain(int index, JavaObject value) {
+    public void setObjectPlain(int index, Object value) {
         objects.setPlain(index, value);
     }
 
     @Override
-    public void setObjectVolatile(int index, JavaObject value) {
+    public void setObjectVolatile(int index, Object value) {
         objects.set(index, value);
     }
 
     @Override
-    public void setObjectRelease(int index, JavaObject value) {
+    public void setObjectRelease(int index, Object value) {
         objects.setRelease(index, value);
     }
 
@@ -97,7 +97,7 @@ final class FieldContainerImpl implements FieldContainer {
     }
 
     @Override
-    public void setLongRelease(long value, int index) {
+    public void setLongRelease(int index, long value) {
         objects.setRelease(index, Long.valueOf(value));
     }
 
@@ -112,7 +112,7 @@ final class FieldContainerImpl implements FieldContainer {
     }
 
     @Override
-    public void setIntRelease(int value, int index) {
+    public void setIntRelease(int index, int value) {
         objects.setRelease(index, Integer.valueOf(value));
     }
 }

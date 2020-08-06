@@ -1,59 +1,83 @@
 package cc.quarkus.qcc.interpreter;
 
-interface FieldContainer {
+public interface FieldContainer {
     FieldSet getFieldSet();
 
     int getFieldIndex(String name);
 
-    JavaObject getObjectPlain(int index);
-
-    JavaObject getObjectVolatile(int index);
-
-    JavaObject getObjectAcquire(int index);
-
-    long getLongPlain(int index);
+    Object getObjectVolatile(int index);
 
     long getLongVolatile(int index);
 
-    long getLongAcquire(int index);
-
-    int getIntPlain(int index);
-
     int getIntVolatile(int index);
 
-    int getIntAcquire(int index);
-
-    void setObjectPlain(int index, JavaObject value);
-
-    void setObjectVolatile(int index, JavaObject value);
-
-    void setObjectRelease(int index, JavaObject value);
-
-    void setLongPlain(int index, long value);
+    void setObjectVolatile(int index, Object value);
 
     void setLongVolatile(int index, long value);
 
-    void setLongRelease(long value, int index);
-
-    void setIntPlain(int index, int value);
-
     void setIntVolatile(int index, int value);
 
-    void setIntRelease(int value, int index);
+    default Object getObjectPlain(int index) {
+        return getObjectVolatile(index);
+    }
+
+    default Object getObjectAcquire(int index) {
+        return getObjectVolatile(index);
+    }
+
+    default long getLongPlain(int index) {
+        return getLongVolatile(index);
+    }
+
+    default long getLongAcquire(int index) {
+        return getLongVolatile(index);
+    }
+
+    default int getIntPlain(int index) {
+        return getIntVolatile(index);
+    }
+
+    default int getIntAcquire(int index) {
+        return getIntVolatile(index);
+    }
+
+    default void setObjectPlain(int index, Object value) {
+        setObjectVolatile(index, value);
+    }
+
+    default void setObjectRelease(int index, Object value) {
+        setObjectVolatile(index, value);
+    }
+
+    default void setLongPlain(int index, long value) {
+        setLongVolatile(index, value);
+    }
+
+    default void setLongRelease(int index, long value) {
+        setLongVolatile(index, value);
+    }
+
+    default void setIntPlain(int index, int value) {
+        setIntVolatile(index, value);
+    }
+
+    default void setIntRelease(int index, int value) {
+        setIntVolatile(index, value);
+    }
 
     default JavaObject getObjectFieldPlain(String name) {
         int index = getFieldIndex(name);
-        return getObjectPlain(index);
+        return (JavaObject) getObjectPlain(index);
     }
 
     default JavaObject getObjectFieldVolatile(String name) {
         int index = getFieldIndex(name);
-        return getObjectVolatile(index);
+        return (JavaObject) getObjectVolatile(index);
     }
 
     default JavaObject getObjectFieldAcquire(String name) {
         int index = getFieldIndex(name);
-        return getObjectAcquire(index);
+        return (JavaObject) getObjectAcquire(index);
     }
 
     default long getLongFieldPlain(String name) {
@@ -113,7 +137,7 @@ interface FieldContainer {
 
     default void setFieldRelease(String name, long value) {
         int index = getFieldIndex(name);
-        setLongRelease(value, index);
+        setLongRelease(index, value);
     }
 
     default void setFieldPlain(String name, int value) {
@@ -128,6 +152,6 @@ interface FieldContainer {
 
     default void setFieldRelease(String name, int value) {
         int index = getFieldIndex(name);
-        setIntRelease(value, index);
+        setIntRelease(index, value);
     }
 }

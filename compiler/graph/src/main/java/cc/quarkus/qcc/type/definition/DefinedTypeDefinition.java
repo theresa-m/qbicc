@@ -1,7 +1,11 @@
 package cc.quarkus.qcc.type.definition;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.Spliterator;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  *
@@ -74,6 +78,37 @@ public interface DefinedTypeDefinition {
         for (int i = 0; i < count; i++) {
             consumer.accept(getFieldDefinition(i));
         }
+    }
+
+    default Stream<DefinedFieldDefinition> fields() {
+        return StreamSupport.stream(new Spliterator<DefinedFieldDefinition>() {
+            int i = 0;
+            int count = getFieldCount();
+            @Override
+            public boolean tryAdvance(Consumer<? super DefinedFieldDefinition> action) {
+                if (i < count) {
+                    action.accept(getFieldDefinition(i++));
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+
+            @Override
+            public Spliterator<DefinedFieldDefinition> trySplit() {
+                return null;
+            }
+
+            @Override
+            public long estimateSize() {
+                return count;
+            }
+
+            @Override
+            public int characteristics() {
+                return SIZED;
+            }
+        }, false);
     }
 
     int getMethodCount();

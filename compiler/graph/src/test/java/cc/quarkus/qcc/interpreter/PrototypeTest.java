@@ -5,6 +5,7 @@ import cc.quarkus.qcc.type.definition.DefinedTypeDefinition;
 import cc.quarkus.qcc.type.definition.Dictionary;
 import io.smallrye.common.function.ExceptionConsumer;
 import org.fest.assertions.core.Condition;
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -15,10 +16,11 @@ import static cc.quarkus.qcc.TestUtil.defineInitialClass;
 import static cc.quarkus.qcc.TestUtil.initialize;
 import static cc.quarkus.qcc.interpreter.CodegenUtils.p;
 import static org.fest.assertions.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class PrototypeTest {
     @Test
-    @Ignore("test is failing")
     public void testPrototype() throws Exception {
         withRootDictionary((dictionary) -> {
             String classWithFields = p(ClassWithFields.class);
@@ -40,6 +42,12 @@ public class PrototypeTest {
             });
 
             FieldContainer protoObject = proto.construct();
+
+            int instanceReferenceIndex = protoObject.getFieldIndex("instanceReference");
+            assertEquals(8, instanceReferenceIndex);
+            assertNull(protoObject.getObjectVolatile(instanceReferenceIndex));
+            protoObject.setObjectVolatile(instanceReferenceIndex, "foo");
+            assertEquals(protoObject.getObjectVolatile(instanceReferenceIndex), "foo");
         });
     }
 

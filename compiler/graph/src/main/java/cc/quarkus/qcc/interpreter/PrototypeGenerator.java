@@ -6,21 +6,26 @@ import cc.quarkus.qcc.graph.FloatType;
 import cc.quarkus.qcc.graph.IntegerType;
 import cc.quarkus.qcc.graph.Type;
 import cc.quarkus.qcc.graph.WordType;
-import cc.quarkus.qcc.type.definition.DefinedTypeDefinition;
-import cc.quarkus.qcc.type.definition.VerifiedTypeDefinition;
+import cc.quarkus.qcc.type.definition.*;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Label;
+import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.IntStream;
 
-import static cc.quarkus.qcc.interpreter.CodegenUtils.arrayOf;
-import static cc.quarkus.qcc.interpreter.CodegenUtils.ci;
-import static cc.quarkus.qcc.interpreter.CodegenUtils.p;
+import static cc.quarkus.qcc.interpreter.CodegenUtils.*;
+import static cc.quarkus.qcc.type.definition.ClassFile.ACC_PUBLIC;
+import static cc.quarkus.qcc.type.definition.ClassFile.ACC_VOLATILE;
+import static org.objectweb.asm.ClassWriter.COMPUTE_FRAMES;
+import static org.objectweb.asm.ClassWriter.COMPUTE_MAXS;
 
 public class PrototypeGenerator {
     private static Map<DefinedTypeDefinition, Prototype> prototypes = new HashMap<>();
-    private static ClassDefiningClassLoader cdcl = new ClassDefiningClassLoader();
+    private static ClassDefiningClassLoader cdcl = new ClassDefiningClassLoader(PrototypeGenerator.class.getClassLoader());
+    private static final String PACKAGE = FieldContainer.class.getPackageName().replace('.', '/');
 
     public static Prototype getPrototype(DefinedTypeDefinition definition) {
         return prototypes.computeIfAbsent(definition, PrototypeGenerator::generate);
@@ -29,10 +34,9 @@ public class PrototypeGenerator {
     private static Prototype generate(DefinedTypeDefinition defined) {
         VerifiedTypeDefinition verified = defined.verify();
         ClassType classType = verified.getClassType();
-        String className = classType.getClassName();
 
         // prepend qcc so they're isolated from containing VM
-        className = "qcc/" + className;
+        String className = PACKAGE + '/' + classType.getClassName().replace('/', '_');
 
         ClassType superType = classType.getSuperClass();
         String superName;
@@ -44,25 +48,75 @@ public class PrototypeGenerator {
             superName = superProto.getClassName();
         }
 
-        ClassWriter proto = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+        Printer printer = new Textifier ();
+        this.method = new TraceMethodVisitor(mv, printer);
+        ClassWriter proto = new ClassWriter(COMPUTE_FRAMES | COMPUTE_MAXS);
 
         proto.visit(Opcodes.V9, verified.getModifiers(), p(className), null, p(superName), arrayOf(p(FieldContainer.class)));
 
+        // generate fields
+        Map<Integer, ResolvedFieldDefinition> indexedFields = new HashMap<>();
         verified.eachField(
-                (field) -> proto.visitField(
-                        field.getModifiers(),
-                        field.getName(),
-                        ci(javaTypeFromFieldType(field.resolve().getType())),
-                        null, null));
+                (field) -> {
+                    ResolvedFieldDefinition resolved = field.resolve();
+                    indexedFields.put(indexedFields.size(), resolved);
+                    proto.visitField(
+                            field.getModifiers() | ACC_VOLATILE,
+                            field.getName(),
+                            ci(javaTypeFromFieldType(resolved.getType())),
+                            null, null);
+                });
+
+        // generate accessor methods
+        int size = indexedFields.size();
+
+        { // getObjectVolatile
+            MethodVisitor getObjectVolatile = proto.visitMethod(ACC_PUBLIC, "getObjectVolatile", sig(JavaObject.class, int.class), null, null);
+            getObjectVolatile.visitCode();
+
+            Label govDefault = new Label();
+            Label[] govLabels = IntStream.range(0, size).mapToObj(i -> {
+                if (javaTypeFromFieldType(indexedFields.get(i).getType()) == Object.class) {
+                    return new Label();
+                }
+                return govDefault;
+            }).toArray(Label[]::new);
+
+            getObjectVolatile.visitVarInsn(Opcodes.ILOAD, 1);
+            getObjectVolatile.visitTableSwitchInsn(0, size, govDefault, govLabels);
+
+            indexedFields.forEach((i, f) -> {
+                Label l = govLabels[i];
+                if (l != govDefault) {
+                    getObjectVolatile.visitLabel(l);
+                    getObjectVolatile.visitVarInsn(Opcodes.ALOAD, 0);
+                    getObjectVolatile.visitFieldInsn(Opcodes.GETFIELD, className, f.getName(), ci(Object.class));
+                    getObjectVolatile.visitInsn(Opcodes.ARETURN);
+                }
+            });
+            getObjectVolatile.visitLabel(govDefault);
+            getObjectVolatile.visitTypeInsn(Opcodes.NEW, p(RuntimeException.class));
+            getObjectVolatile.visitLdcInsn("not an object field");
+            getObjectVolatile.visitMethodInsn(Opcodes.INVOKESPECIAL, p(RuntimeException.class), "<init>", sig(void.class, String.class), false);
+            getObjectVolatile.visitInsn(Opcodes.ATHROW);
+
+            getObjectVolatile.visitMaxs(1, 1);
+            getObjectVolatile.visitEnd();
+        }
 
         proto.visitEnd();
 
         byte[] bytecode = proto.toByteArray();
 
+
+
         return new PrototypeImpl(classType, className, bytecode, cdcl);
     }
 
     private static class ClassDefiningClassLoader extends ClassLoader {
+        ClassDefiningClassLoader(ClassLoader parent) {
+            super(parent);
+        }
         public Class<?> defineAndResolveClass(String name, byte[] b, int off, int len) {
             Class<?> cls = super.defineClass(name, b, off, len);
             resolveClass(cls);
@@ -75,7 +129,7 @@ public class PrototypeGenerator {
         private final String className;
         private final byte[] bytecode;
         private final ClassDefiningClassLoader cdcl;
-        private final Class<? extends FieldContainer>  cls;
+        private final Class<? extends FieldContainer> cls;
 
         PrototypeImpl(ClassType classType, String className, byte[] bytecode, ClassDefiningClassLoader cdcl) {
             this.classType = classType;

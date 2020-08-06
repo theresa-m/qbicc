@@ -27,7 +27,7 @@ final class FieldSet {
 
         sortedFields = fields.toArray((i) -> new DefinedFieldDefinition[i]);
 
-        for (int i = 0; i < cnt; i++) {
+        for (int i = 0; i < sortedFields.length; i++) {
             DefinedFieldDefinition field = sortedFields[i];
             fieldIndices.put(field.getName(), i);
         }

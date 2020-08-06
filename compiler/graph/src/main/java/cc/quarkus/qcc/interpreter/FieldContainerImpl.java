@@ -16,79 +16,103 @@ final class FieldContainerImpl implements FieldContainer {
         objects = new AtomicReferenceArray<>(fieldSet.getSize());
     }
 
+    @Override
     public FieldSet getFieldSet() {
         return fieldSet;
     }
 
-    public JavaObject getObjectFieldPlain(String name) {
-        return (JavaObject) objects.getPlain(fieldSet.getIndex(name));
+    @Override
+    public int getFieldIndex(String name) {
+        return fieldSet.getIndex(name);
     }
 
-    public JavaObject getObjectFieldVolatile(String name) {
-        return (JavaObject) objects.get(fieldSet.getIndex(name));
+    @Override
+    public JavaObject getObjectPlain(int index) {
+        return (JavaObject) objects.getPlain(index);
     }
 
-    public JavaObject getObjectFieldAcquire(String name) {
-        return (JavaObject) objects.getAcquire(fieldSet.getIndex(name));
+    @Override
+    public JavaObject getObjectVolatile(int index) {
+        return (JavaObject) objects.get(index);
     }
 
-    public long getLongFieldPlain(String name) {
-        return ((Number) objects.getPlain(fieldSet.getIndex(name))).longValue();
+    @Override
+    public JavaObject getObjectAcquire(int index) {
+        return (JavaObject) objects.getAcquire(index);
     }
 
-    public long getLongFieldVolatile(String name) {
-        return ((Number) objects.get(fieldSet.getIndex(name))).longValue();
+    @Override
+    public long getLongPlain(int index) {
+        return ((Number) objects.getPlain(index)).longValue();
     }
 
-    public long getLongFieldAcquire(String name) {
-        return ((Number) objects.getAcquire(fieldSet.getIndex(name))).longValue();
+    @Override
+    public long getLongVolatile(int index) {
+        return ((Number) objects.get(index)).longValue();
     }
 
-    public int getIntFieldPlain(String name) {
-        return ((Number) objects.getPlain(fieldSet.getIndex(name))).intValue();
+    @Override
+    public long getLongAcquire(int index) {
+        return ((Number) objects.getAcquire(index)).longValue();
     }
 
-    public int getIntFieldVolatile(String name) {
-        return ((Number) objects.get(fieldSet.getIndex(name))).intValue();
+    @Override
+    public int getIntPlain(int index) {
+        return ((Number) objects.getPlain(index)).intValue();
     }
 
-    public int getIntFieldAcquire(String name) {
-        return ((Number) objects.getAcquire(fieldSet.getIndex(name))).intValue();
+    @Override
+    public int getIntVolatile(int index) {
+        return ((Number) objects.get(index)).intValue();
     }
 
-    public void setFieldPlain(String name, JavaObject value) {
-        objects.setPlain(fieldSet.getIndex(name), value);
+    @Override
+    public int getIntAcquire(int index) {
+        return ((Number) objects.getAcquire(index)).intValue();
     }
 
-    public void setFieldVolatile(String name, JavaObject value) {
-        objects.set(fieldSet.getIndex(name), value);
+    @Override
+    public void setObjectPlain(int index, JavaObject value) {
+        objects.setPlain(index, value);
     }
 
-    public void setFieldRelease(String name, JavaObject value) {
-        objects.setRelease(fieldSet.getIndex(name), value);
+    @Override
+    public void setObjectVolatile(int index, JavaObject value) {
+        objects.set(index, value);
     }
 
-    public void setFieldPlain(String name, long value) {
-        objects.setPlain(fieldSet.getIndex(name), Long.valueOf(value));
+    @Override
+    public void setObjectRelease(int index, JavaObject value) {
+        objects.setRelease(index, value);
     }
 
-    public void setFieldVolatile(String name, long value) {
-        objects.set(fieldSet.getIndex(name), Long.valueOf(value));
+    @Override
+    public void setLongPlain(int index, long value) {
+        objects.setPlain(index, Long.valueOf(value));
     }
 
-    public void setFieldRelease(String name, long value) {
-        objects.setRelease(fieldSet.getIndex(name), Long.valueOf(value));
+    @Override
+    public void setLongVolatile(int index, long value) {
+        objects.set(index, Long.valueOf(value));
     }
 
-    public void setFieldPlain(String name, int value) {
-        objects.setPlain(fieldSet.getIndex(name), Integer.valueOf(value));
+    @Override
+    public void setLongRelease(long value, int index) {
+        objects.setRelease(index, Long.valueOf(value));
     }
 
-    public void setFieldVolatile(String name, int value) {
-        objects.set(fieldSet.getIndex(name), Integer.valueOf(value));
+    @Override
+    public void setIntPlain(int index, int value) {
+        objects.setPlain(index, Integer.valueOf(value));
     }
 
-    public void setFieldRelease(String name, int value) {
-        objects.setRelease(fieldSet.getIndex(name), Integer.valueOf(value));
+    @Override
+    public void setIntVolatile(int index, int value) {
+        objects.set(index, Integer.valueOf(value));
+    }
+
+    @Override
+    public void setIntRelease(int value, int index) {
+        objects.setRelease(index, Integer.valueOf(value));
     }
 }

@@ -3,39 +3,131 @@ package cc.quarkus.qcc.interpreter;
 interface FieldContainer {
     FieldSet getFieldSet();
 
-    JavaObject getObjectFieldPlain(String name);
+    int getFieldIndex(String name);
 
-    JavaObject getObjectFieldVolatile(String name);
+    JavaObject getObjectPlain(int index);
 
-    JavaObject getObjectFieldAcquire(String name);
+    JavaObject getObjectVolatile(int index);
 
-    long getLongFieldPlain(String name);
+    JavaObject getObjectAcquire(int index);
 
-    long getLongFieldVolatile(String name);
+    long getLongPlain(int index);
 
-    long getLongFieldAcquire(String name);
+    long getLongVolatile(int index);
 
-    int getIntFieldPlain(String name);
+    long getLongAcquire(int index);
 
-    int getIntFieldVolatile(String name);
+    int getIntPlain(int index);
 
-    int getIntFieldAcquire(String name);
+    int getIntVolatile(int index);
 
-    void setFieldPlain(String name, JavaObject value);
+    int getIntAcquire(int index);
 
-    void setFieldVolatile(String name, JavaObject value);
+    void setObjectPlain(int index, JavaObject value);
 
-    void setFieldRelease(String name, JavaObject value);
+    void setObjectVolatile(int index, JavaObject value);
 
-    void setFieldPlain(String name, long value);
+    void setObjectRelease(int index, JavaObject value);
 
-    void setFieldVolatile(String name, long value);
+    void setLongPlain(int index, long value);
 
-    void setFieldRelease(String name, long value);
+    void setLongVolatile(int index, long value);
 
-    void setFieldPlain(String name, int value);
+    void setLongRelease(long value, int index);
 
-    void setFieldVolatile(String name, int value);
+    void setIntPlain(int index, int value);
 
-    void setFieldRelease(String name, int value);
+    void setIntVolatile(int index, int value);
+
+    void setIntRelease(int value, int index);
+
+    default JavaObject getObjectFieldPlain(String name) {
+        int index = getFieldIndex(name);
+        return getObjectPlain(index);
+    }
+
+    default JavaObject getObjectFieldVolatile(String name) {
+        int index = getFieldIndex(name);
+        return getObjectVolatile(index);
+    }
+
+    default JavaObject getObjectFieldAcquire(String name) {
+        int index = getFieldIndex(name);
+        return getObjectAcquire(index);
+    }
+
+    default long getLongFieldPlain(String name) {
+        int index = getFieldIndex(name);
+        return getLongPlain(index);
+    }
+
+    default long getLongFieldVolatile(String name) {
+        int index = getFieldIndex(name);
+        return getLongVolatile(index);
+    }
+
+    default long getLongFieldAcquire(String name) {
+        int index = getFieldIndex(name);
+        return getLongAcquire(index);
+    }
+
+    default int getIntFieldPlain(String name) {
+        int index = getFieldIndex(name);
+        return getIntPlain(index);
+    }
+
+    default int getIntFieldVolatile(String name) {
+        int index = getFieldIndex(name);
+        return getIntVolatile(index);
+    }
+
+    default int getIntFieldAcquire(String name) {
+        int index = getFieldIndex(name);
+        return getIntAcquire(index);
+    }
+
+    default void setFieldPlain(String name, JavaObject value) {
+        int index = getFieldIndex(name);
+        setObjectPlain(index, value);
+    }
+
+    default void setFieldVolatile(String name, JavaObject value) {
+        int index = getFieldIndex(name);
+        setObjectVolatile(index, value);
+    }
+
+    default void setFieldRelease(String name, JavaObject value) {
+        int index = getFieldIndex(name);
+        setObjectRelease(index, value);
+    }
+
+    default void setFieldPlain(String name, long value) {
+        int index = getFieldIndex(name);
+        setLongPlain(index, value);
+    }
+
+    default void setFieldVolatile(String name, long value) {
+        int index = getFieldIndex(name);
+        setLongVolatile(index, value);
+    }
+
+    default void setFieldRelease(String name, long value) {
+        int index = getFieldIndex(name);
+        setLongRelease(value, index);
+    }
+
+    default void setFieldPlain(String name, int value) {
+        int index = getFieldIndex(name);
+        setIntPlain(index, value);
+    }
+
+    default void setFieldVolatile(String name, int value) {
+        int index = getFieldIndex(name);
+        setIntVolatile(index, value);
+    }
+
+    default void setFieldRelease(String name, int value) {
+        int index = getFieldIndex(name);
+        setIntRelease(value, index);
+    }
 }

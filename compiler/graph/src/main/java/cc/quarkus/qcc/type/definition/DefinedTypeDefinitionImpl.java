@@ -25,8 +25,8 @@ final class DefinedTypeDefinitionImpl implements DefinedTypeDefinition {
 
         this.definingLoader = definingLoader;
         this.classBytes = orig;
-        this.name = processClassName(buffer, cpOffsets, name);
         this.access = buffer.getShort() & 0xffff;
+        this.name = processClassName(buffer, cpOffsets, name);
         this.superName = processSuperClassName(buffer, cpOffsets, scratch);
         this.interfaceNames = processInterfaces(buffer, cpOffsets, scratch);
         this.fields = processFields(buffer, cpOffsets, scratch);

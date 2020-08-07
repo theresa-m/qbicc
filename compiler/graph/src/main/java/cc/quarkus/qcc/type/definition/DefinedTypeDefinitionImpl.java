@@ -13,29 +13,81 @@ final class DefinedTypeDefinitionImpl implements DefinedTypeDefinition {
     private final ByteBuffer classBytes;
     private final String superName;
     private final String[] interfaceNames;
-    private final int[] fieldOffsets;
     private final DefinedFieldDefinition[] fields;
-    private final int[] methodOffsets;
     private final DefinedMethodDefinition[] methods;
 
     private volatile DefinedTypeDefinition verified;
 
     DefinedTypeDefinitionImpl(final Dictionary definingLoader, final String name, final ByteBuffer orig) {
-        // do some basic pieces of verification
-        if (orig.order() != ByteOrder.BIG_ENDIAN) {
-            throw new DefineFailedException("Wrong byte buffer order");
+        ByteBuffer buffer = validateClassfileFormat(orig);
+        int[] cpOffsets = processConstantPool(buffer);
+        StringBuilder scratch = new StringBuilder(64);
+
+        this.definingLoader = definingLoader;
+        this.classBytes = orig;
+        this.name = processClassName(buffer, cpOffsets, name);
+        this.access = buffer.getShort() & 0xffff;
+        this.superName = processSuperClassName(buffer, cpOffsets, scratch);
+        this.interfaceNames = processInterfaces(buffer, cpOffsets, scratch);
+        this.fields = processFields(buffer, cpOffsets, scratch);
+        this.methods = processMethods(buffer, cpOffsets, scratch);
+
+        // Just to make sure something else is not broken in the definition.
+        validateRestOfEntry(buffer);
+    }
+
+    private void validateRestOfEntry(ByteBuffer buffer) {
+        // now just check that the rest makes sense
+        int attrCnt = buffer.getShort() & 0xffff;
+        for (int i = 0; i < attrCnt; i ++) {
+            buffer.getShort(); // name index
+            int size = buffer.getInt();
+            buffer.position(buffer.position() + size);
         }
-        ByteBuffer buffer = orig.duplicate();
-        int magic = buffer.getInt();
-        if (magic != 0xcafebabe) {
-            throw new DefineFailedException("Bad magic number");
+        if (buffer.hasRemaining()) {
+            throw new DefineFailedException("Extra data at end of class file");
         }
-        int minor = buffer.getShort() & 0xffff;
-        int major = buffer.getShort() & 0xffff;
-        // todo fix up
-        if (major < 45 || major == 45 && minor < 3 || major > 55 || major == 55 && minor > 0) {
-            throw new DefineFailedException("Unsupported class version " + major + "." + minor);
+    }
+
+    private DefinedMethodDefinition[] processMethods(ByteBuffer buffer, int[] cpOffsets, StringBuilder scratch) {
+        int methodsCnt = buffer.getShort() & 0xffff;
+        int[] methodOffsets = new int[methodsCnt];
+
+        DefinedMethodDefinition[] methods = new DefinedMethodDefinition[methodsCnt];
+        for (int i = 0; i < methodsCnt; i ++) {
+            methodOffsets[i] = buffer.position();
+            int methodAccess = buffer.getShort() & 0xffff;
+            String methodName = ClassFile.getUtf8Entry(buffer, cpOffsets[buffer.getShort() & 0xffff], scratch);
+            String methodDescriptor = ClassFile.getUtf8Entry(buffer, cpOffsets[buffer.getShort() & 0xffff], scratch);
+            // skip attributes - except for code (for now)
+            int attrCnt = buffer.getShort() & 0xffff;
+            boolean hasCode = false;
+            String[] parameterDescriptors = getParameterDescriptors(methodDescriptor, 1, 0);
+            String returnTypeDescriptor = methodDescriptor.substring(methodDescriptor.lastIndexOf(')') + 1);
+            String[] parameterNames = new String[parameterDescriptors.length];
+            for (int j = 0; j < attrCnt; j ++) {
+                if (ClassFile.utf8EntryEquals(buffer, cpOffsets[buffer.getShort() & 0xffff], "Code")) {
+                    hasCode = true;
+                }
+                int size = buffer.getInt();
+                buffer.position(buffer.position() + size);
+            }
+            methods[i] = new DefinedMethodDefinitionImpl(this, i, hasCode, methodAccess, methodName, parameterDescriptors, returnTypeDescriptor, parameterNames);
         }
+        return methods;
+    }
+
+    private String processClassName(ByteBuffer buffer, int[] cpOffsets, String name) {
+        int thisClassIdx = buffer.getShort() & 0xffff;
+
+        if (name != null && ! ClassFile.classNameEquals(buffer, thisClassIdx, cpOffsets, name)) {
+            throw new DefineFailedException("Class name mismatch");
+        }
+
+        return name;
+    }
+
+    private int[] processConstantPool(ByteBuffer buffer) {
         int cpCount = (buffer.getShort() & 0xffff) - 1;
         // one extra slot because the constant pool is one-based, so just leave a hole at the beginning
         int[] cpOffsets = new int[cpCount + 1];
@@ -82,27 +134,27 @@ final class DefinedTypeDefinitionImpl implements DefinedTypeDefinition {
                 }
             }
         }
-        StringBuilder b = new StringBuilder(64);
-        int access = buffer.getShort() & 0xffff;
-        int thisClassIdx = buffer.getShort() & 0xffff;
-        if (name != null && ! ClassFile.classNameEquals(buffer, thisClassIdx, cpOffsets, name)) {
-            throw new DefineFailedException("Class name mismatch");
-        }
-        int superClassIdx = buffer.getShort() & 0xffff;
-        String superName = ClassFile.getClassName(buffer, superClassIdx, cpOffsets, b);
+        return cpOffsets;
+    }
+
+    private String[] processInterfaces(ByteBuffer buffer, int[] cpOffsets, StringBuilder scratch) {
         int interfacesCount = buffer.getShort() & 0xffff;
         String[] interfaceNames = new String[interfacesCount];
         for (int i = 0; i < interfacesCount; i ++) {
-            interfaceNames[i] = ClassFile.getClassName(buffer, buffer.getShort() & 0xffff, cpOffsets, b);
+            interfaceNames[i] = ClassFile.getClassName(buffer, buffer.getShort() & 0xffff, cpOffsets, scratch);
         }
+        return interfaceNames;
+    }
+
+    private DefinedFieldDefinition[] processFields(ByteBuffer buffer, int[] cpOffsets, StringBuilder scratch) {
         int fieldsCnt = buffer.getShort() & 0xffff;
         int[] fieldOffsets = new int[fieldsCnt];
         DefinedFieldDefinition[] fields = new DefinedFieldDefinition[fieldsCnt];
         for (int i = 0; i < fieldsCnt; i ++) {
             fieldOffsets[i] = buffer.position();
             int fieldAccess = buffer.getShort() & 0xffff;
-            String fieldName = ClassFile.getUtf8Entry(buffer, cpOffsets[buffer.getShort() & 0xffff], b);
-            String fieldDescriptor = ClassFile.getUtf8Entry(buffer, cpOffsets[buffer.getShort() & 0xffff], b);
+            String fieldName =  ClassFile.getUtf8Entry(buffer, cpOffsets[buffer.getShort() & 0xffff], scratch);
+            String fieldDescriptor =  ClassFile.getUtf8Entry(buffer, cpOffsets[buffer.getShort() & 0xffff], scratch);
             // skip attributes
             int attrCnt = buffer.getShort() & 0xffff;
             for (int j = 0; j < attrCnt; j ++) {
@@ -113,51 +165,38 @@ final class DefinedTypeDefinitionImpl implements DefinedTypeDefinition {
             }
             fields[i] = new DefinedFieldDefinitionImpl(this, fieldAccess, fieldName, fieldDescriptor);
         }
-        int methodsCnt = buffer.getShort() & 0xffff;
-        int[] methodOffsets = new int[methodsCnt];
-        DefinedMethodDefinition[] methods = new DefinedMethodDefinition[methodsCnt];
-        for (int i = 0; i < methodsCnt; i ++) {
-            methodOffsets[i] = buffer.position();
-            int methodAccess = buffer.getShort() & 0xffff;
-            String methodName = ClassFile.getUtf8Entry(buffer, cpOffsets[buffer.getShort() & 0xffff], b);
-            String methodDescriptor = ClassFile.getUtf8Entry(buffer, cpOffsets[buffer.getShort() & 0xffff], b);
-            // skip attributes - except for code (for now)
-            int attrCnt = buffer.getShort() & 0xffff;
-            boolean hasCode = false;
-            String[] parameterDescriptors = getParameterDescriptors(methodDescriptor, 1, 0);
-            String returnTypeDescriptor = methodDescriptor.substring(methodDescriptor.lastIndexOf(')') + 1);
-            String[] parameterNames = new String[parameterDescriptors.length];
-            int[] parameterAccesses = new int[parameterDescriptors.length];
-            for (int j = 0; j < attrCnt; j ++) {
-                if (ClassFile.utf8EntryEquals(buffer, cpOffsets[buffer.getShort() & 0xffff], "Code")) {
-                    hasCode = true;
-                }
-                int size = buffer.getInt();
-                buffer.position(buffer.position() + size);
-            }
-            methods[i] = new DefinedMethodDefinitionImpl(this, i, hasCode, methodAccess, methodName, parameterDescriptors, returnTypeDescriptor, parameterNames);
+        return fields;
+    }
+
+    private String processSuperClassName(ByteBuffer buffer, int[] cpOffsets, StringBuilder scratch) {
+        int superClassIdx = buffer.getShort() & 0xffff;
+
+        return ClassFile.getClassName(buffer, superClassIdx, cpOffsets, scratch);
+    }
+
+    private ByteBuffer validateClassfileFormat(ByteBuffer orig) {
+        // do some basic pieces of verification
+        if (orig.order() != ByteOrder.BIG_ENDIAN) {
+            throw new DefineFailedException("Wrong byte buffer order");
         }
-        // now just check that the rest makes sense
-        int attrCnt = buffer.getShort() & 0xffff;
-        for (int i = 0; i < attrCnt; i ++) {
-            buffer.getShort(); // name index
-            int size = buffer.getInt();
-            buffer.position(buffer.position() + size);
-        }
-        if (buffer.hasRemaining()) {
-            throw new DefineFailedException("Extra data at end of class file");
+        ByteBuffer buffer = orig.duplicate();
+        int magic = buffer.getInt();
+        if (magic != 0xcafebabe) {
+            throw new DefineFailedException("Bad magic number");
         }
 
-        this.definingLoader = definingLoader;
-        this.name = name;
-        this.access = access;
-        this.classBytes = orig;
-        this.superName = superName;
-        this.interfaceNames = interfaceNames;
-        this.fieldOffsets = fieldOffsets;
-        this.fields = fields;
-        this.methodOffsets = methodOffsets;
-        this.methods = methods;
+        validateValidClassFileVersion(buffer);
+
+        return buffer;
+    }
+
+    private void validateValidClassFileVersion(ByteBuffer buffer) {
+        int minor = buffer.getShort() & 0xffff;
+        int major = buffer.getShort() & 0xffff;
+        // todo fix up
+        if (major < 45 || major == 45 && minor < 3 || major > 55 || major == 55 && minor > 0) {
+            throw new DefineFailedException("Unsupported class version " + major + "." + minor);
+        }
     }
 
     private static String getReturnTypeDescriptor(final String descriptor) {

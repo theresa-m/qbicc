@@ -6,6 +6,8 @@ import cc.quarkus.qcc.graph.Type;
 import cc.quarkus.qcc.type.descriptor.MethodIdentifier;
 import io.smallrye.common.constraint.Assert;
 
+import java.util.List;
+
 /**
  *
  */
@@ -64,6 +66,25 @@ final class ResolvedTypeDefinitionImpl implements ResolvedTypeDefinition {
         return delegate.getFieldCount();
     }
 
+    @Override
+    public List<DefinedFieldDefinition> getFields() {
+        return delegate.getFields();
+    }
+
+    @Override
+    public int getStaticFieldCount() {
+        return delegate.getStaticFieldCount();
+    }
+
+    public ResolvedFieldDefinition getStaticFieldDefinition(int index) throws IndexOutOfBoundsException {
+        return delegate.getStaticFieldDefinition(index).resolve();
+    }
+
+    @Override
+    public List<DefinedFieldDefinition> getStaticFields() {
+        return delegate.getStaticFields();
+    }
+
     public int getMethodCount() {
         return delegate.getMethodCount();
     }
@@ -113,9 +134,18 @@ final class ResolvedTypeDefinitionImpl implements ResolvedTypeDefinition {
         // 1. If C declares a field with the name and descriptor specified by the field reference,
         // field lookup succeeds. The declared field is the result of the field lookup.
 
+        ResolvedTypeDefinition f = getFields().stream().findFirst(field -> field.getName().equals(name) && field.getType() == type);
         int fieldCount = getFieldCount();
         for (int i = 0; i < fieldCount; i ++) {
             ResolvedFieldDefinition field = getFieldDefinition(i);
+            if ( field.getName().equals(name) && field.getType() == type ) {
+                return field;
+            }
+        }
+
+        fieldCount = getStaticFieldCount();
+        for (int i = 0; i < fieldCount; i ++) {
+            ResolvedFieldDefinition field = getStaticFieldDefinition(i);
             if ( field.getName().equals(name) && field.getType() == type ) {
                 return field;
             }
@@ -143,6 +173,14 @@ final class ResolvedTypeDefinitionImpl implements ResolvedTypeDefinition {
         int fieldCount = getFieldCount();
         for (int i = 0; i < fieldCount; i ++) {
             ResolvedFieldDefinition field = getFieldDefinition(i);
+            if ( field.getName().equals(name)) {
+                return field;
+            }
+        }
+
+        fieldCount = getStaticFieldCount();
+        for (int i = 0; i < fieldCount; i ++) {
+            ResolvedFieldDefinition field = getStaticFieldDefinition(i);
             if ( field.getName().equals(name)) {
                 return field;
             }

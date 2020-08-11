@@ -8,6 +8,8 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
+import java.util.List;
+
 /**
  *
  */
@@ -91,6 +93,26 @@ final class VerifiedTypeDefinitionImpl implements VerifiedTypeDefinition {
         return delegate.getFieldCount();
     }
 
+    @Override
+    public List<DefinedFieldDefinition> getFields() {
+        return delegate.getFields();
+    }
+
+    @Override
+    public int getStaticFieldCount() {
+        return delegate.getStaticFieldCount();
+    }
+
+    @Override
+    public DefinedFieldDefinition getStaticFieldDefinition(int index) throws IndexOutOfBoundsException {
+        return delegate.getStaticFieldDefinition(index);
+    }
+
+    @Override
+    public List<DefinedFieldDefinition> getStaticFields() {
+        return delegate.getStaticFields();
+    }
+
     public int getMethodCount() {
         return delegate.getMethodCount();
     }
@@ -135,6 +157,10 @@ final class VerifiedTypeDefinitionImpl implements VerifiedTypeDefinition {
         cnt = getFieldCount();
         for (int i = 0; i < cnt; i ++) {
             getFieldDefinition(i).resolve();
+        }
+        cnt = getStaticFieldCount();
+        for (int i = 0; i < cnt; i ++) {
+            getStaticFieldDefinition(i).resolve();
         }
         cnt = getMethodCount();
         for (int i = 0; i < cnt; i ++) {

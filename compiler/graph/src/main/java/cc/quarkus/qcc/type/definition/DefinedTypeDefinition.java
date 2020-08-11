@@ -1,6 +1,7 @@
 package cc.quarkus.qcc.type.definition;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -69,12 +70,13 @@ public interface DefinedTypeDefinition {
 
     DefinedFieldDefinition getFieldDefinition(int index) throws IndexOutOfBoundsException;
 
-    default void eachField(Consumer<DefinedFieldDefinition> consumer) {
-        int count = getFieldCount();
-        for (int i = 0; i < count; i++) {
-            consumer.accept(getFieldDefinition(i));
-        }
-    }
+    List<DefinedFieldDefinition> getFields();
+
+    int getStaticFieldCount();
+
+    DefinedFieldDefinition getStaticFieldDefinition(int index) throws IndexOutOfBoundsException;
+
+    List<DefinedFieldDefinition> getStaticFields();
 
     int getMethodCount();
 

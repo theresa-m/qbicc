@@ -48,12 +48,17 @@ public class PrototypeGenerator {
 
         proto.visit(Opcodes.V9, verified.getModifiers(), p(className), null, p(superName), arrayOf(p(FieldContainer.class)));
 
-        verified.eachField(
-                (field) -> proto.visitField(
-                        field.getModifiers(),
-                        field.getName(),
-                        ci(javaTypeFromFieldType(field.resolve().getType())),
-                        null, null));
+        verified.getFields().stream().forEach((field) -> proto.visitField(
+                field.getModifiers(),
+                field.getName(),
+                ci(javaTypeFromFieldType(field.resolve().getType())),
+                null, null));
+
+        verified.getStaticFields().stream().forEach((field) -> proto.visitField(
+                field.getModifiers(),
+                field.getName(),
+                ci(javaTypeFromFieldType(field.resolve().getType())),
+                null, null));
 
         proto.visitEnd();
 

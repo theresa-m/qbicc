@@ -1,5 +1,7 @@
 package cc.quarkus.qcc.type.definition;
 
+import java.util.List;
+
 /**
  *
  */
@@ -40,6 +42,26 @@ final class VerificationFailedDefinitionImpl implements DefinedTypeDefinition {
 
     public int getFieldCount() {
         return delegate.getFieldCount();
+    }
+
+    @Override
+    public List<DefinedFieldDefinition> getFields() {
+        return delegate.getFields();
+    }
+
+    @Override
+    public int getStaticFieldCount() {
+        return delegate.getStaticFieldCount();
+    }
+
+    @Override
+    public DefinedFieldDefinition getStaticFieldDefinition(int index) throws IndexOutOfBoundsException {
+        return delegate.getStaticFieldDefinition(index);
+    }
+
+    @Override
+    public List<DefinedFieldDefinition> getStaticFields() {
+        return delegate.getStaticFields();
     }
 
     public int getMethodCount() {

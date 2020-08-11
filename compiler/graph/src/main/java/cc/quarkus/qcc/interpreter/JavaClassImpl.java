@@ -10,15 +10,15 @@ final class JavaClassImpl extends JavaObjectImpl implements JavaClass {
     JavaClassImpl(final JavaVMImpl vm, final VerifiedTypeDefinition definition) {
         super(vm.getClassClass());
         this.definition = definition;
-        staticFields = new FieldContainerImpl(definition, new FieldSet(definition, true));
-        instanceFields = new FieldSet(definition, false);
+        staticFields = new FieldContainerImpl(definition, new FieldSet(definition.getStaticFields()));
+        instanceFields = new FieldSet(definition.getFields());
     }
 
     JavaClassImpl(final JavaVMImpl vm, final VerifiedTypeDefinition definition, boolean ignoredClassClass) {
         // Class.class
-        super(new FieldContainerImpl(definition, new FieldSet(definition, false)));
+        super(new FieldContainerImpl(definition, new FieldSet(definition.getFields())));
         this.definition = definition;
-        staticFields = new FieldContainerImpl(definition, new FieldSet(definition, true));
+        staticFields = new FieldContainerImpl(definition, new FieldSet(definition.getStaticFields()));
         instanceFields = fields.getFieldSet();
     }
 

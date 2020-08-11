@@ -4,6 +4,8 @@ import cc.quarkus.qcc.graph.ClassType;
 import cc.quarkus.qcc.graph.Type;
 import cc.quarkus.qcc.type.descriptor.MethodIdentifier;
 
+import java.util.List;
+
 /**
  *
  */
@@ -76,6 +78,25 @@ final class PreparedTypeDefinitionImpl implements PreparedTypeDefinition {
 
     public ResolvedFieldDefinition getFieldDefinition(final int index) throws IndexOutOfBoundsException {
         return delegate.getFieldDefinition(index);
+    }
+
+    @Override
+    public List<DefinedFieldDefinition> getFields() {
+        return delegate.getFields();
+    }
+
+    @Override
+    public int getStaticFieldCount() {
+        return delegate.getStaticFieldCount();
+    }
+
+    public ResolvedFieldDefinition getStaticFieldDefinition(int index) throws IndexOutOfBoundsException {
+        return delegate.getStaticFieldDefinition(index);
+    }
+
+    @Override
+    public List<DefinedFieldDefinition> getStaticFields() {
+        return delegate.getStaticFields();
     }
 
     public ResolvedMethodDefinition getMethodDefinition(final int index) throws IndexOutOfBoundsException {

@@ -2,6 +2,8 @@ package cc.quarkus.qcc.type.definition;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
@@ -13,7 +15,8 @@ final class DefinedTypeDefinitionImpl implements DefinedTypeDefinition {
     private final ByteBuffer classBytes;
     private final String superName;
     private final String[] interfaceNames;
-    private final DefinedFieldDefinition[] fields;
+    private final List<DefinedFieldDefinition> fields;
+    private final List<DefinedFieldDefinition> staticFields;
     private final DefinedMethodDefinition[] methods;
 
     private volatile DefinedTypeDefinition verified;
@@ -29,7 +32,17 @@ final class DefinedTypeDefinitionImpl implements DefinedTypeDefinition {
         this.name = processClassName(buffer, cpOffsets, name);
         this.superName = processSuperClassName(buffer, cpOffsets, scratch);
         this.interfaceNames = processInterfaces(buffer, cpOffsets, scratch);
-        this.fields = processFields(buffer, cpOffsets, scratch);
+        this.fields = new ArrayList<>();
+        this.staticFields = new ArrayList<>();
+
+        for (DefinedFieldDefinition field: processFields(buffer, cpOffsets, scratch)) {
+            if (field.isStatic()) {
+                staticFields.add(field);
+            } else {
+                fields.add(field);
+            }
+        }
+
         this.methods = processMethods(buffer, cpOffsets, scratch);
 
         // Just to make sure something else is not broken in the definition.
@@ -148,13 +161,11 @@ final class DefinedTypeDefinitionImpl implements DefinedTypeDefinition {
 
     private DefinedFieldDefinition[] processFields(ByteBuffer buffer, int[] cpOffsets, StringBuilder scratch) {
         int fieldsCnt = buffer.getShort() & 0xffff;
-        int[] fieldOffsets = new int[fieldsCnt];
         DefinedFieldDefinition[] fields = new DefinedFieldDefinition[fieldsCnt];
         for (int i = 0; i < fieldsCnt; i ++) {
-            fieldOffsets[i] = buffer.position();
             int fieldAccess = buffer.getShort() & 0xffff;
-            String fieldName =  ClassFile.getUtf8Entry(buffer, cpOffsets[buffer.getShort() & 0xffff], scratch);
-            String fieldDescriptor =  ClassFile.getUtf8Entry(buffer, cpOffsets[buffer.getShort() & 0xffff], scratch);
+            String fieldName = ClassFile.getUtf8Entry(buffer, cpOffsets[buffer.getShort() & 0xffff], scratch);
+            String fieldDescriptor = ClassFile.getUtf8Entry(buffer, cpOffsets[buffer.getShort() & 0xffff], scratch);
             // skip attributes
             int attrCnt = buffer.getShort() & 0xffff;
             for (int j = 0; j < attrCnt; j ++) {
@@ -371,8 +382,20 @@ final class DefinedTypeDefinitionImpl implements DefinedTypeDefinition {
         }
     }
 
+    public List<DefinedFieldDefinition> getFields() {
+        return fields;
+    }
+
     public int getFieldCount() {
-        return fields.length;
+        return fields.size();
+    }
+
+    public List<DefinedFieldDefinition> getStaticFields() {
+        return fields;
+    }
+
+    public int getStaticFieldCount() {
+        return staticFields.size();
     }
 
     public int getMethodCount() {
@@ -384,7 +407,11 @@ final class DefinedTypeDefinitionImpl implements DefinedTypeDefinition {
     }
 
     public DefinedFieldDefinition getFieldDefinition(final int index) throws IndexOutOfBoundsException {
-        return fields[index];
+        return fields.get(index);
+    }
+
+    public DefinedFieldDefinition getStaticFieldDefinition(final int index) throws IndexOutOfBoundsException {
+        return staticFields.get(index);
     }
 
     // internal

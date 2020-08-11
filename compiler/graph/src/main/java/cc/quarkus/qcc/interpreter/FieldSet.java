@@ -15,19 +15,12 @@ final class FieldSet {
     final Map<String, Integer> fieldIndices = new HashMap<>();
     final DefinedFieldDefinition[] sortedFields;
 
-    FieldSet(VerifiedTypeDefinition type, boolean statics) {
-        int cnt = type.getFieldCount();
-        List<DefinedFieldDefinition> fields = new ArrayList<>(cnt);
-        type.eachField((field) -> {
-            if (statics == field.isStatic()) {
-                fields.add(field);
-            }
-        });
+    FieldSet(List<DefinedFieldDefinition> fields) {
         fields.sort(Comparator.comparing(DefinedFieldDefinition::getName));
 
-        sortedFields = fields.toArray((i) -> new DefinedFieldDefinition[i]);
+        sortedFields = fields.toArray(new DefinedFieldDefinition[0]);
 
-        for (int i = 0; i < cnt; i++) {
+        for (int i = 0; i < sortedFields.length; i++) {
             DefinedFieldDefinition field = sortedFields[i];
             fieldIndices.put(field.getName(), i);
         }

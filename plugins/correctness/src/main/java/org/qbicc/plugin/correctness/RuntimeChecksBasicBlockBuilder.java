@@ -312,14 +312,18 @@ public class RuntimeChecksBasicBlockBuilder extends DelegatingBasicBlockBuilder 
                     throwIncompatibleClassChangeError();
                     throw Assert.unreachableCode();
                 }
-                initCheck(node.getElement().getEnclosingType().load().getType());
-                // return value unused in this case
+                /* prevent infinite loop in VMHelpers.initialize_class by not adding an init check for classes needed to initialize the clinit states array  */
+                if (target.getSourceFileName().equals("ObjectModel.java")) {
+                    return null;
+                }
+                initCheck(node.getExecutable().getEnclosingType().load().getType());
                 return null;
             }
         }, null);
     }
 
     private void initCheck(ObjectType objectType) {
+        // previously always evaluating to true for StaticMethodElementHandle visitor
         if (objectType.equals(originalElement.getEnclosingType().load().getType())) {
             // Same type, must already be initialized.
             return;

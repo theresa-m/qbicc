@@ -5,6 +5,8 @@ import java.nio.ByteOrder;
 import java.util.Collections;
 import java.util.List;
 
+import com.sun.jdi.ClassType;
+import com.sun.jdi.Method;
 import org.qbicc.context.CompilationContext;
 import org.qbicc.driver.Driver;
 import org.qbicc.driver.Phase;
@@ -73,6 +75,7 @@ public final class CoreIntrinsics {
         registerJavaLangNumberIntrinsics(ctxt);
         registerJavaLangFloatDoubleMathIntrinsics(ctxt);
         registerJavaLangRuntimeIntrinsics(ctxt);
+        registerJdkInternalMiscUnsafeIntrinsics(ctxt);
         registerOrgQbiccRuntimeCNativeIntrinsics(ctxt);
         registerOrgQbiccObjectModelIntrinsics(ctxt);
         registerOrgQbiccRuntimeMainIntrinsics(ctxt);
@@ -1292,5 +1295,18 @@ public final class CoreIntrinsics {
         MethodDescriptor availableProcessorsMethodDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.I, List.of());
 
         intrinsics.registerIntrinsic(runtimeClassDescriptor, "availableProcessors", availableProcessorsMethodDesc, availableProcessorsIntrinsic);
+    }
+
+    private static void registerJdkInternalMiscUnsafeIntrinsics(CompilationContext ctxt) {
+        Intrinsics intrinsics = Intrinsics.get(ctxt);
+        ClassContext classContext = ctxt.getBootstrapClassContext();
+        ClassTypeDescriptor unsafeClassDescriptor = ClassTypeDescriptor.synthesize(classContext, "jdk/internal/misc/Unsafe");
+
+        // TODO implement
+        Literal voidLiteral = ctxt.getLiteralFactory().zeroInitializerLiteralOfType(ctxt.getTypeSystem().getVoidType());
+        StaticIntrinsic registerNatives = (builder, target, arguments) -> voidLiteral;
+
+        MethodDescriptor registerNativesMethodDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.V, List.of());
+        intrinsics.registerIntrinsic(unsafeClassDescriptor, "registerNatives", registerNativesMethodDesc, registerNatives);
     }
 }

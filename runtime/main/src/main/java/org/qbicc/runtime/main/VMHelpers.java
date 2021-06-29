@@ -20,6 +20,9 @@ import static org.qbicc.runtime.stdc.Stdlib.*;
 public final class VMHelpers {
     /* map Java object to native mutex for object monitor bytecodes. */
     static ConcurrentMap<Object, NativeObjectMonitor> objectMonitorNatives = null;
+    /* Force clinit to run early. most VMHelper methods will be replaced after clinit checks. */
+    public static void forceVMHelpersClinit() {
+    }
 
     @NoSideEffects
     public static boolean instanceof_class(Object instance, Class<?> cls) {

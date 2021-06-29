@@ -22,6 +22,7 @@ public class Main {
     public static native int putchar(int arg);
 
     public static void main(String[] args) {
+        Object o = new Object();
         putchar('h');
         putchar('e');
         putchar('l');
@@ -31,7 +32,9 @@ public class Main {
         putchar('w');
         putchar('o');
         putchar('r');
-        putchar('l');
+        synchronized (o) {
+            putchar('l');
+        }
         putchar('d');
         putchar('\n');
     }

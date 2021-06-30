@@ -3,7 +3,6 @@ package org.qbicc.runtime.main;
 import org.qbicc.runtime.CNative;
 import org.qbicc.runtime.NoSideEffects;
 import org.qbicc.runtime.stdc.Stddef;
-import org.qbicc.runtime.stdc.Stdint;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -19,7 +18,9 @@ import static org.qbicc.runtime.stdc.Stdlib.*;
 @SuppressWarnings("unused")
 public final class VMHelpers {
     /* map Java object to native mutex for object monitor bytecodes. */
-    static ConcurrentMap<Object, NativeObjectMonitor> objectMonitorNatives = null;
+    //static ConcurrentMap objectMonitorNatives = new ConcurrentHashMap(); // TODO stuck on infinite loop in unsafe initialization
+    static NativeObjectMonitor nom;
+
     /* Force clinit to run early. most VMHelper methods will be replaced after clinit checks. */
     public static void forceVMHelpersClinit() {
     }
@@ -120,10 +121,7 @@ public final class VMHelpers {
 
     // TODO: mark this with a "NoInline" annotation
     static void monitor_enter(Object object) throws IllegalMonitorStateException {
-        /* TODO: deal with racy nature of this creation */
-        if (objectMonitorNatives == null) {
-            objectMonitorNatives = new ConcurrentHashMap<>();
-        }
+        // TODO do all this inside a concurrent hash map
 
         // TODO malloc(sizeof(class)) resulted in "invalid coercion of s64 to u64" this is a workaround
         Stddef.size_t mutexAttrSize = sizeof(pthread_mutexattr_t.class);
@@ -146,16 +144,17 @@ public final class VMHelpers {
         omError(pthread_mutexattr_destroy((pthread_mutexattr_t_ptr)attr));
         free(attrVoid);
 
-        // TODO acquire monitor and add to hash map
+        omError(pthread_mutex_lock((pthread_mutex_t_ptr) m));
+        nom = new NativeObjectMonitor((pthread_mutex_t_ptr) m);
     }
 
     // TODO: mark this with a "NoInline" annotation
     static void monitor_exit(Object object) throws IllegalMonitorStateException {
-//        NativeObjectMonitor monitor = objectMonitorNatives.get(object);
-//        if (null == monitor) {
-//            throw new IllegalMonitorStateException("monitor could not be found for monitorexit");
-//        }
-//        omError(pthread_mutex_unlock(monitor.getPthreadMutex()));
+        // TODO get this from concurrent hashmap, unlock concurrently
+        if (null == nom) {
+            throw new IllegalMonitorStateException("monitor could not be found for monitorexit");
+        }
+        omError(pthread_mutex_unlock(nom.getPthreadMutex()));
     }
 
     // TODO: mark this with a "NoInline" annotation

@@ -59,6 +59,7 @@ import org.qbicc.type.descriptor.ArrayTypeDescriptor;
 import org.qbicc.type.descriptor.BaseTypeDescriptor;
 import org.qbicc.type.descriptor.ClassTypeDescriptor;
 import org.qbicc.type.descriptor.MethodDescriptor;
+import sun.misc.Unsafe;
 
 /**
  * Core JDK intrinsics.
@@ -1301,12 +1302,37 @@ public final class CoreIntrinsics {
         Intrinsics intrinsics = Intrinsics.get(ctxt);
         ClassContext classContext = ctxt.getBootstrapClassContext();
         ClassTypeDescriptor unsafeClassDescriptor = ClassTypeDescriptor.synthesize(classContext, "jdk/internal/misc/Unsafe");
+        ClassTypeDescriptor classClassDescriptor = ClassTypeDescriptor.synthesize(classContext, "java/lang/Class");
 
-        // TODO implement
         Literal voidLiteral = ctxt.getLiteralFactory().zeroInitializerLiteralOfType(ctxt.getTypeSystem().getVoidType());
-        StaticIntrinsic registerNatives = (builder, target, arguments) -> voidLiteral;
 
-        MethodDescriptor registerNativesMethodDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.V, List.of());
-        intrinsics.registerIntrinsic(unsafeClassDescriptor, "registerNatives", registerNativesMethodDesc, registerNatives);
+        /* V() */
+        MethodDescriptor voidDescriptor = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.V, List.of());
+        /* I() */
+        MethodDescriptor intDescriptor = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.I, List.of());
+        /* Z() */
+        MethodDescriptor booleanDescriptor = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, List.of());
+        /* I(java/lang/Class) */
+        MethodDescriptor intDescriptorClassArg = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.I, List.of(classClassDescriptor));
+
+        // TODO workaround implementations
+        StaticIntrinsic registerNatives = (builder, target, arguments) -> voidLiteral;
+        InstanceIntrinsic addressSize0 = (builder, instance, target, arguments) ->
+            ctxt.getLiteralFactory().literalOf(ctxt.getPlatform().getCpu().getCpuWordSize());
+        InstanceIntrinsic isBigEndian0 = (builder, instance, target, arguments) ->
+            ctxt.getLiteralFactory().literalOf(ctxt.getTypeSystem().getEndianness() == ByteOrder.BIG_ENDIAN);
+        InstanceIntrinsic unalignedAccess0 = (builder, instance, target, arguments) ->
+            ctxt.getLiteralFactory().literalOf(true);
+        InstanceIntrinsic arrayIndexScale0 = (builder, instance, target, arguments) ->
+            ctxt.getLiteralFactory().literalOf(0);
+        InstanceIntrinsic arrayBaseOffset0 = (builder, instance, target, arguments) ->
+            ctxt.getLiteralFactory().literalOf(0);
+
+        intrinsics.registerIntrinsic(unsafeClassDescriptor, "registerNatives", voidDescriptor, registerNatives);
+        intrinsics.registerIntrinsic(unsafeClassDescriptor, "addressSize0", intDescriptor, addressSize0);
+        intrinsics.registerIntrinsic(unsafeClassDescriptor, "isBigEndian0", booleanDescriptor, isBigEndian0);
+        intrinsics.registerIntrinsic(unsafeClassDescriptor, "unalignedAccess0", booleanDescriptor, unalignedAccess0);
+        intrinsics.registerIntrinsic(unsafeClassDescriptor, "arrayIndexScale0", intDescriptorClassArg, arrayIndexScale0);
+        intrinsics.registerIntrinsic(unsafeClassDescriptor, "arrayBaseOffset0", intDescriptorClassArg, arrayBaseOffset0);
     }
 }

@@ -18,8 +18,9 @@ import static org.qbicc.runtime.stdc.Stdlib.*;
 @SuppressWarnings("unused")
 public final class VMHelpers {
     /* map Java object to native mutex for object monitor bytecodes. */
+    /* TODO add types <Object, NativeObjectMonitor> */
     //static ConcurrentMap objectMonitorNatives = new ConcurrentHashMap(); // TODO stuck on infinite loop in unsafe initialization
-    static NativeObjectMonitor nom;
+    //static NativeObjectMonitor nom;
 
     /* Force clinit to run early. most VMHelper methods will be replaced after clinit checks. */
     public static void forceVMHelpersClinit() {
@@ -144,17 +145,17 @@ public final class VMHelpers {
         omError(pthread_mutexattr_destroy((pthread_mutexattr_t_ptr)attr));
         free(attrVoid);
 
-        omError(pthread_mutex_lock((pthread_mutex_t_ptr) m));
-        nom = new NativeObjectMonitor((pthread_mutex_t_ptr) m);
+//        omError(pthread_mutex_lock((pthread_mutex_t_ptr) m));
+//        nom = new NativeObjectMonitor((pthread_mutex_t_ptr) m);
     }
 
     // TODO: mark this with a "NoInline" annotation
     static void monitor_exit(Object object) throws IllegalMonitorStateException {
         // TODO get this from concurrent hashmap, unlock concurrently
-        if (null == nom) {
-            throw new IllegalMonitorStateException("monitor could not be found for monitorexit");
-        }
-        omError(pthread_mutex_unlock(nom.getPthreadMutex()));
+//        if (null == nom) {
+//            throw new IllegalMonitorStateException("monitor could not be found for monitorexit");
+//        }
+//        omError(pthread_mutex_unlock(nom.getPthreadMutex()));
     }
 
     // TODO: mark this with a "NoInline" annotation

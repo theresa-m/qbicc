@@ -5,6 +5,7 @@ import static org.qbicc.runtime.posix.PThread.pthread_exit;
 
 import org.qbicc.runtime.Build;
 import org.qbicc.runtime.NotReachableException;
+import sun.misc.Unsafe;
 
 /**
  * Holds the native image main entry point.
@@ -39,6 +40,7 @@ public final class Main {
         //todo: string construction
         //String execName = utf8zToJavaString(argv[0].cast());
         try {
+            Unsafe.getUnsafe();
             VMHelpers.forceVMHelpersClinit();
             userMain(args);
         } catch (Throwable t) {

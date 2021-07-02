@@ -1317,16 +1317,22 @@ public final class CoreIntrinsics {
 
         // TODO workaround implementations
         StaticIntrinsic registerNatives = (builder, target, arguments) -> voidLiteral;
-        InstanceIntrinsic addressSize0 = (builder, instance, target, arguments) ->
-            ctxt.getLiteralFactory().literalOf(ctxt.getPlatform().getCpu().getCpuWordSize());
-        InstanceIntrinsic isBigEndian0 = (builder, instance, target, arguments) ->
-            ctxt.getLiteralFactory().literalOf(ctxt.getTypeSystem().getEndianness() == ByteOrder.BIG_ENDIAN);
+        InstanceIntrinsic addressSize0 = (builder, instance, target, arguments) -> {
+            int addressSize = ctxt.getPlatform().getCpu().getCpuWordSize();
+            return ctxt.getLiteralFactory().literalOf(addressSize);
+        };
+        InstanceIntrinsic isBigEndian0 = (builder, instance, target, arguments) -> {
+            boolean isBigEndian = ctxt.getTypeSystem().getEndianness() == ByteOrder.BIG_ENDIAN;
+            return ctxt.getLiteralFactory().literalOf(isBigEndian);
+        };
         InstanceIntrinsic unalignedAccess0 = (builder, instance, target, arguments) ->
             ctxt.getLiteralFactory().literalOf(true);
-        InstanceIntrinsic arrayIndexScale0 = (builder, instance, target, arguments) ->
-            ctxt.getLiteralFactory().literalOf(0);
-        InstanceIntrinsic arrayBaseOffset0 = (builder, instance, target, arguments) ->
-            ctxt.getLiteralFactory().literalOf(0);
+        InstanceIntrinsic arrayIndexScale0 = (builder, instance, target, arguments) -> {
+            return ctxt.getLiteralFactory().literalOf(-1);
+        };
+        InstanceIntrinsic arrayBaseOffset0 = (builder, instance, target, arguments) -> {
+            return ctxt.getLiteralFactory().literalOf(-1);
+        };
 
         intrinsics.registerIntrinsic(unsafeClassDescriptor, "registerNatives", voidDescriptor, registerNatives);
         intrinsics.registerIntrinsic(unsafeClassDescriptor, "addressSize0", intDescriptor, addressSize0);

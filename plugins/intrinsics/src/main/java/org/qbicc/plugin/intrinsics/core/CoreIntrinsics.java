@@ -1,6 +1,7 @@
 package org.qbicc.plugin.intrinsics.core;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.nio.ByteOrder;
 import java.util.Collections;
 import java.util.List;
@@ -76,6 +77,7 @@ public final class CoreIntrinsics {
         registerJavaLangNumberIntrinsics(ctxt);
         registerJavaLangFloatDoubleMathIntrinsics(ctxt);
         registerJavaLangRuntimeIntrinsics(ctxt);
+        registerJavaLangStackTraceElement(ctxt);
         registerJdkInternalMiscUnsafeIntrinsics(ctxt);
         registerOrgQbiccRuntimeCNativeIntrinsics(ctxt);
         registerOrgQbiccObjectModelIntrinsics(ctxt);
@@ -169,12 +171,15 @@ public final class CoreIntrinsics {
 
         //    static native Class<?> getPrimitiveClass(String name);
 
+        InstanceIntrinsic isArray = (builder, instance, target, arguments) -> ctxt.getLiteralFactory().literalOf(false);
+
         intrinsics.registerIntrinsic(jlcDesc, "cast", objToObj, cast);
         intrinsics.registerIntrinsic(jlcDesc, "desiredAssertionStatus0", classToBool, desiredAssertionStatus0);
         intrinsics.registerIntrinsic(jlcDesc, "desiredAssertionStatus", emptyToBool, desiredAssertionStatus);
         intrinsics.registerIntrinsic(jlcDesc, "registerNatives", emptyToVoid, registerNatives);
         intrinsics.registerIntrinsic(jlcDesc, "initClassName", emptyToString, initClassName);
         intrinsics.registerIntrinsic(jlcDesc, "getPrimitiveClass", stringToClass, getPrimitiveClass);
+        intrinsics.registerIntrinsic(jlcDesc, "isArray", emptyToBool, isArray);
     }
 
     public static void registerJavaLangStringUTF16Intrinsics(CompilationContext ctxt) {
@@ -279,6 +284,12 @@ public final class CoreIntrinsics {
             ctxt.getLiteralFactory().literalOf(0);
 
         intrinsics.registerIntrinsic(systemDesc, "identityHashCode", objectToIntDesc, identityHashCode);
+
+        // register natives
+        MethodDescriptor registerNativesDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.V, List.of());
+        StaticIntrinsic registerNatives = (builder, target, arguments) ->
+            ctxt.getLiteralFactory().zeroInitializerLiteralOfType(target.getType().getReturnType());
+        intrinsics.registerIntrinsic(systemDesc, "registerNatives", registerNativesDesc, registerNatives);
     }
 
     public static void registerJavaLangThreadIntrinsics(CompilationContext ctxt) {
@@ -420,6 +431,7 @@ public final class CoreIntrinsics {
         Intrinsics intrinsics = Intrinsics.get(ctxt);
         ClassContext classContext = ctxt.getBootstrapClassContext();
         ClassTypeDescriptor objDesc = ClassTypeDescriptor.synthesize(classContext, "java/lang/Object");
+        ClassTypeDescriptor stringDesc = ClassTypeDescriptor.synthesize(classContext, "java/lang/String");
 
         // Object#getClass()Ljava/lang/Class; --> field read of the "typeId" field
         MethodDescriptor getClassDesc =
@@ -437,9 +449,24 @@ public final class CoreIntrinsics {
 
         // TODO: replace this do nothing stub of notifyAll with real implementation
         MethodDescriptor notifyAllDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.V, List.of());
-        InstanceIntrinsic notifyAllIntrinsic = (builder, instance, target, arguments) -> 
+        InstanceIntrinsic notifyAllIntrinsic = (builder, instance, target, arguments) ->
             ctxt.getLiteralFactory().zeroInitializerLiteralOfType(ctxt.getTypeSystem().getVoidType()); // Do nothing
         intrinsics.registerIntrinsic(objDesc, "notifyAll", notifyAllDesc, notifyAllIntrinsic);
+
+        // TODO replace wait stub with real implementation
+        MethodDescriptor waitDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.V, List.of(BaseTypeDescriptor.J));
+        InstanceIntrinsic waitIntrinsic = (builder, instance, target, arguments) ->
+            ctxt.getLiteralFactory().zeroInitializerLiteralOfType(ctxt.getTypeSystem().getVoidType()); // Do nothing
+        intrinsics.registerIntrinsic(objDesc, "wait", waitDesc, waitIntrinsic);
+
+        // TODO replace stub with real implementation
+        MethodDescriptor toStringDesc = MethodDescriptor.synthesize(classContext, stringDesc, List.of());
+        InstanceIntrinsic toStringIntrinsic = (builder, instance, target, arguments) -> {
+            // TODO class name @ hashcode
+            ReferenceType jls = ctxt.getBootstrapClassContext().findDefinedType("java/lang/String").load().getType().getReference();
+            return ctxt.getLiteralFactory().literalOf("", jls);
+        };
+        intrinsics.registerIntrinsic(objDesc, "toString", toStringDesc, toStringIntrinsic);
 
         InstanceIntrinsic clone = (builder, instance, target, arguments) -> {
             ValueType instanceType = instance.getType();
@@ -1296,6 +1323,27 @@ public final class CoreIntrinsics {
         MethodDescriptor availableProcessorsMethodDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.I, List.of());
 
         intrinsics.registerIntrinsic(runtimeClassDescriptor, "availableProcessors", availableProcessorsMethodDesc, availableProcessorsIntrinsic);
+    }
+
+    private static void registerJavaLangStackTraceElement(CompilationContext ctxt) {
+        Intrinsics intrinsics = Intrinsics.get(ctxt);
+        ClassContext classContext = ctxt.getBootstrapClassContext();
+        ClassTypeDescriptor stackTraceElementDescriptor = ClassTypeDescriptor.synthesize(classContext, "java/lang/StackTraceElement");
+        ClassTypeDescriptor throwableDescriptor = ClassTypeDescriptor.synthesize(classContext, "java/lang/Throwable");
+        ClassTypeDescriptor stackFrameInfoDescriptor = ClassTypeDescriptor.synthesize(classContext, "java/lang/StackFrameInfo");
+        ArrayTypeDescriptor stackTraceElementArrayDescriptor = ArrayTypeDescriptor.of(classContext, stackTraceElementDescriptor);
+
+        Literal voidLiteral = ctxt.getLiteralFactory().zeroInitializerLiteralOfType(ctxt.getTypeSystem().getVoidType());
+
+        MethodDescriptor initStackTraceElementsMethodDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.V, List.of(stackTraceElementArrayDescriptor, throwableDescriptor));
+        MethodDescriptor initStackTraceElementMethodDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.V, List.of(stackTraceElementDescriptor, stackFrameInfoDescriptor));
+
+        // TODO implement
+        StaticIntrinsic initStackTraceElements = (builder, target, arguments) -> voidLiteral;
+        StaticIntrinsic initStackTraceElement = (builder, target, arguments) -> voidLiteral;
+
+        intrinsics.registerIntrinsic(stackTraceElementDescriptor, "initStackTraceElements", initStackTraceElementsMethodDesc, initStackTraceElements);
+        intrinsics.registerIntrinsic(stackTraceElementDescriptor, "initStackTraceElement", initStackTraceElementMethodDesc, initStackTraceElement);
     }
 
     private static void registerJdkInternalMiscUnsafeIntrinsics(CompilationContext ctxt) {

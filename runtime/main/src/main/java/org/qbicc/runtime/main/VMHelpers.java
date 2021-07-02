@@ -4,6 +4,7 @@ import org.qbicc.runtime.CNative;
 import org.qbicc.runtime.NoSideEffects;
 import org.qbicc.runtime.stdc.Stddef;
 
+import java.lang.annotation.Native;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -21,7 +22,6 @@ public final class VMHelpers {
     /* map Java object to native mutex for object monitor bytecodes. */
     /* TODO add types <Object, NativeObjectMonitor> */
     //static ConcurrentMap objectMonitorNatives = new ConcurrentHashMap(); // TODO stuck on infinite loop in unsafe initialization
-    //static NativeObjectMonitor nom;
     // TODO never clear out hashmap at this stage - monitors may be reused
     static HashMap<Object, NativeObjectMonitor> objectMonitorNatives = new HashMap();
 
@@ -125,32 +125,40 @@ public final class VMHelpers {
 
     // TODO: mark this with a "NoInline" annotation
     static void monitor_enter(Object object) throws IllegalMonitorStateException {
-        // TODO do all this inside a concurrent hash map
+        /* TODO concurrency needed
+         * ConcurrentHashMap relies on unsafe being loaded,
+         * HashMap.computeIfAbsent relies on MethodHandles natives
+         * not feeling lack tackling these right now so finding the simplest solution
+         */
+        NativeObjectMonitor nom;
+        if ((nom = objectMonitorNatives.get(object)) != null) {
+            omError(pthread_mutex_lock(nom.getPthreadMutex()));
+        } else {
+            // TODO malloc(sizeof(class)) resulted in "invalid coercion of s64 to u64" this is a workaround
+            Stddef.size_t mutexAttrSize = sizeof(pthread_mutexattr_t.class);
+            ptr<?> attrVoid = malloc(word(mutexAttrSize.longValue()));
+            if (attrVoid.isNull()) {
+                throw new OutOfMemoryError(/*"Allocation failed"*/);
+            }
+            ptr<pthread_mutexattr_t> attr = (ptr<pthread_mutexattr_t>) castPtr(attrVoid, pthread_mutexattr_t.class);
 
-        // TODO malloc(sizeof(class)) resulted in "invalid coercion of s64 to u64" this is a workaround
-        Stddef.size_t mutexAttrSize = sizeof(pthread_mutexattr_t.class);
-        ptr<?> attrVoid = malloc(word(mutexAttrSize.longValue()));
-        if (attrVoid.isNull()) {
-            throw new OutOfMemoryError(/*"Allocation failed"*/);
+            Stddef.size_t mutexSize = sizeof(pthread_mutex_t.class);
+            ptr<?> mVoid = malloc(word(mutexSize.longValue()));
+            if (attrVoid.isNull()) {
+                throw new OutOfMemoryError(/*"Allocation failed"*/);
+            }
+            ptr<pthread_mutex_t> m = (ptr<pthread_mutex_t>) castPtr(mVoid, pthread_mutex_t.class);
+
+            omError(pthread_mutexattr_init((pthread_mutexattr_t_ptr) attr));
+            omError(pthread_mutexattr_settype((pthread_mutexattr_t_ptr) attr, PTHREAD_MUTEX_RECURSIVE));
+            omError(pthread_mutex_init((pthread_mutex_t_ptr) m, (const_pthread_mutexattr_t_ptr) attr));
+            omError(pthread_mutexattr_destroy((pthread_mutexattr_t_ptr) attr));
+            free(attrVoid);
+
+            omError(pthread_mutex_lock((pthread_mutex_t_ptr) m));
+            nom = new NativeObjectMonitor((pthread_mutex_t_ptr) m);
+            objectMonitorNatives.put(object, nom);
         }
-        ptr<pthread_mutexattr_t> attr = (ptr<pthread_mutexattr_t>)castPtr(attrVoid, pthread_mutexattr_t.class);
-
-        Stddef.size_t mutexSize = sizeof(pthread_mutex_t.class);
-        ptr<?> mVoid = malloc(word(mutexSize.longValue()));
-        if (attrVoid.isNull()) {
-            throw new OutOfMemoryError(/*"Allocation failed"*/);
-        }
-        ptr<pthread_mutex_t> m = (ptr<pthread_mutex_t>)castPtr(mVoid, pthread_mutex_t.class);
-
-        omError(pthread_mutexattr_init((pthread_mutexattr_t_ptr)attr));
-        omError(pthread_mutexattr_settype((pthread_mutexattr_t_ptr)attr, PTHREAD_MUTEX_RECURSIVE));
-        omError(pthread_mutex_init((pthread_mutex_t_ptr)m, (const_pthread_mutexattr_t_ptr)attr));
-        omError(pthread_mutexattr_destroy((pthread_mutexattr_t_ptr)attr));
-        free(attrVoid);
-
-        omError(pthread_mutex_lock((pthread_mutex_t_ptr) m));
-        NativeObjectMonitor nom = new NativeObjectMonitor((pthread_mutex_t_ptr) m);
-        objectMonitorNatives.put(object, nom); // TODO compute if absent
     }
 
     // TODO: mark this with a "NoInline" annotation

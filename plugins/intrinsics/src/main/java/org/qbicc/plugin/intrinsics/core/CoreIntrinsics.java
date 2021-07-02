@@ -79,6 +79,7 @@ public final class CoreIntrinsics {
         registerJavaLangRuntimeIntrinsics(ctxt);
         registerJavaLangStackTraceElement(ctxt);
         registerJdkInternalMiscUnsafeIntrinsics(ctxt);
+        registerJdkInternalMiscVMIntrinsics(ctxt);
         registerOrgQbiccRuntimeCNativeIntrinsics(ctxt);
         registerOrgQbiccObjectModelIntrinsics(ctxt);
         registerOrgQbiccRuntimeMainIntrinsics(ctxt);
@@ -1388,5 +1389,20 @@ public final class CoreIntrinsics {
         intrinsics.registerIntrinsic(unsafeClassDescriptor, "unalignedAccess0", booleanDescriptor, unalignedAccess0);
         intrinsics.registerIntrinsic(unsafeClassDescriptor, "arrayIndexScale0", intDescriptorClassArg, arrayIndexScale0);
         intrinsics.registerIntrinsic(unsafeClassDescriptor, "arrayBaseOffset0", intDescriptorClassArg, arrayBaseOffset0);
+    }
+
+    private static void registerJdkInternalMiscVMIntrinsics(CompilationContext ctxt) {
+        Intrinsics intrinsics = Intrinsics.get(ctxt);
+        ClassContext classContext = ctxt.getBootstrapClassContext();
+        ClassTypeDescriptor vmClassDescriptor = ClassTypeDescriptor.synthesize(classContext, "jdk/internal/misc/VM");
+
+        Literal voidLiteral = ctxt.getLiteralFactory().zeroInitializerLiteralOfType(ctxt.getTypeSystem().getVoidType());
+
+        MethodDescriptor voidDescriptor = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.V, List.of());
+
+        // TODO stub
+        StaticIntrinsic initialize = (builder, target, arguments) -> voidLiteral;
+
+        intrinsics.registerIntrinsic(vmClassDescriptor, "initialize", voidDescriptor, initialize);
     }
 }

@@ -40,7 +40,7 @@ public final class Main {
         //todo: string construction
         //String execName = utf8zToJavaString(argv[0].cast());
         try {
-            Unsafe.getUnsafe();
+            //Unsafe.getUnsafe();
             VMHelpers.forceVMHelpersClinit();
             userMain(args);
         } catch (Throwable t) {

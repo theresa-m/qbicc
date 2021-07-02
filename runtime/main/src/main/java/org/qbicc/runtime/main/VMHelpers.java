@@ -4,6 +4,7 @@ import org.qbicc.runtime.CNative;
 import org.qbicc.runtime.NoSideEffects;
 import org.qbicc.runtime.stdc.Stddef;
 
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -21,6 +22,8 @@ public final class VMHelpers {
     /* TODO add types <Object, NativeObjectMonitor> */
     //static ConcurrentMap objectMonitorNatives = new ConcurrentHashMap(); // TODO stuck on infinite loop in unsafe initialization
     //static NativeObjectMonitor nom;
+    // TODO never clear out hashmap at this stage - monitors may be reused
+    static HashMap<Object, NativeObjectMonitor> objectMonitorNatives = new HashMap();
 
     /* Force clinit to run early. most VMHelper methods will be replaced after clinit checks. */
     public static void forceVMHelpersClinit() {
@@ -145,17 +148,19 @@ public final class VMHelpers {
         omError(pthread_mutexattr_destroy((pthread_mutexattr_t_ptr)attr));
         free(attrVoid);
 
-//        omError(pthread_mutex_lock((pthread_mutex_t_ptr) m));
-//        nom = new NativeObjectMonitor((pthread_mutex_t_ptr) m);
+        omError(pthread_mutex_lock((pthread_mutex_t_ptr) m));
+        NativeObjectMonitor nom = new NativeObjectMonitor((pthread_mutex_t_ptr) m);
+        objectMonitorNatives.put(object, nom); // TODO compute if absent
     }
 
     // TODO: mark this with a "NoInline" annotation
     static void monitor_exit(Object object) throws IllegalMonitorStateException {
         // TODO get this from concurrent hashmap, unlock concurrently
-//        if (null == nom) {
-//            throw new IllegalMonitorStateException("monitor could not be found for monitorexit");
-//        }
-//        omError(pthread_mutex_unlock(nom.getPthreadMutex()));
+        NativeObjectMonitor nom = objectMonitorNatives.get(object);
+        if (null == nom) {
+            throw new IllegalMonitorStateException("monitor could not be found for monitorexit");
+        }
+        omError(pthread_mutex_unlock(nom.getPthreadMutex()));
     }
 
     // TODO: mark this with a "NoInline" annotation

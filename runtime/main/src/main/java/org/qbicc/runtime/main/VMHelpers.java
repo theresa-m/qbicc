@@ -131,9 +131,9 @@ public final class VMHelpers {
          * not feeling lack tackling these right now so finding the simplest solution
          */
         NativeObjectMonitor nom;
-        if ((nom = objectMonitorNatives.get(object)) != null) {
-            omError(pthread_mutex_lock(nom.getPthreadMutex()));
-        } else {
+//        if ((nom = objectMonitorNatives.get(object)) != null) {
+//            omError(pthread_mutex_lock(nom.getPthreadMutex()));
+//        } else {
             // TODO malloc(sizeof(class)) resulted in "invalid coercion of s64 to u64" this is a workaround
             Stddef.size_t mutexAttrSize = sizeof(pthread_mutexattr_t.class);
             ptr<?> attrVoid = malloc(word(mutexAttrSize.longValue()));
@@ -158,7 +158,7 @@ public final class VMHelpers {
             omError(pthread_mutex_lock((pthread_mutex_t_ptr) m));
             nom = new NativeObjectMonitor((pthread_mutex_t_ptr) m);
             objectMonitorNatives.put(object, nom);
-        }
+//        }
     }
 
     // TODO: mark this with a "NoInline" annotation

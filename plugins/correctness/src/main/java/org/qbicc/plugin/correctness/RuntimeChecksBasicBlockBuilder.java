@@ -120,6 +120,17 @@ public class RuntimeChecksBasicBlockBuilder extends DelegatingBasicBlockBuilder 
 
     @Override
     public Value new_(final ClassObjectType type) {
+        if (originalElement instanceof MethodElement) {
+            MethodElement me = (MethodElement) originalElement;
+            if (me.getSourceFileName().equals("VMHelpers.java") && me.getName().equals("monitor_enter")) {
+                // NativeObjectMonitor and OutOfMemoryError
+                return super.new_(type);
+            }
+            if (me.getSourceFileName().equals("HashMap.java") && me.getName().equals("newNode")) {
+                // HashMAp.newNode
+                return super.new_(type);
+            }
+        }
         initCheck(type);
         return super.new_(type);
     }

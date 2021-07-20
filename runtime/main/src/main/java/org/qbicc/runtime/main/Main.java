@@ -25,7 +25,10 @@ public final class Main {
 
     @export
     public static c_int main(c_int argc, char_ptr[] argv) {
-
+        /* VMHelpers initialization should be as early as possible since it's needed
+         * for object monitors and synchronization of class initializations to work properly.
+         */
+        VMHelpers.forceClinit();
         // first set up VM
         // ...
         // next set up the initial thread
@@ -39,7 +42,6 @@ public final class Main {
         //todo: string construction
         //String execName = utf8zToJavaString(argv[0].cast());
         try {
-            VMHelpers.forceClinit();
             userMain(args);
         } catch (Throwable t) {
             Thread.UncaughtExceptionHandler handler = Thread.currentThread().getUncaughtExceptionHandler();

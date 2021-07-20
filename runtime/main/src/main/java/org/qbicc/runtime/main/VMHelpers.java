@@ -126,6 +126,9 @@ public final class VMHelpers {
 
     // TODO: mark this with a "NoInline" annotation
     static void monitor_enter(Object object) throws IllegalMonitorStateException {
+        /* TODO synchronization blocks are called from initialize_class before VMHelpers clinit is run */
+        if (objectMonitorNatives == null) return;
+
         NativeObjectMonitor nom;
         if ((nom = objectMonitorNatives.get(object)) != null) {
             omError(pthread_mutex_lock(nom.getPthreadMutex()));
@@ -157,6 +160,9 @@ public final class VMHelpers {
 
     // TODO: mark this with a "NoInline" annotation
     static void monitor_exit(Object object) throws IllegalMonitorStateException {
+        /* TODO synchronization blocks are called from initialize_class before VMHelpers clinit is run */
+        if (objectMonitorNatives == null) return;
+
         NativeObjectMonitor nom = objectMonitorNatives.get(object);
         if (null == nom) {
             throw new IllegalMonitorStateException("native monitor could not be found for monitor_exit");

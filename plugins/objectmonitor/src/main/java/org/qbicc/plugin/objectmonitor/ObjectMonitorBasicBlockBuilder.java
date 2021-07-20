@@ -26,23 +26,11 @@ public class ObjectMonitorBasicBlockBuilder extends DelegatingBasicBlockBuilder 
 
     // TODO enable only test synchronized block for now
     public Node monitorEnter(final Value object) {
-        if (object.getElement() instanceof MethodElement) {
-            MethodElement e = (MethodElement) object.getElement();
-            if (e.getName().equals("main")) {
-                return generateObjectMonitorFunctionCall(object, monitorEnterFunctionName);
-            }
-        }
-        return super.monitorEnter(object);
+        return generateObjectMonitorFunctionCall(object, monitorEnterFunctionName);
     }
 
     public Node monitorExit(final Value object) {
-        if (object.getElement() instanceof MethodElement) {
-            MethodElement e = (MethodElement) object.getElement();
-            if (e.getName().equals("main")) {
-                return generateObjectMonitorFunctionCall(object, monitorExitFunctionName);
-            }
-        }
-        return super.monitorExit(object);
+        return generateObjectMonitorFunctionCall(object, monitorExitFunctionName);
     }
     
     private Value generateObjectMonitorFunctionCall(final Value object, String functionName) {

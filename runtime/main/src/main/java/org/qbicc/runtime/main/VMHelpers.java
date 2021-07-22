@@ -4,6 +4,7 @@ import org.qbicc.runtime.CNative;
 import org.qbicc.runtime.NoSideEffects;
 import org.qbicc.runtime.stdc.Stddef;
 
+import java.lang.annotation.Native;
 import java.util.HashMap;
 
 import static org.qbicc.runtime.CNative.*;
@@ -16,12 +17,34 @@ import static org.qbicc.runtime.stdc.Stdlib.*;
  */
 @SuppressWarnings("unused")
 public final class VMHelpers {
-    // TODO add concurrency
+    // TODO no noms or pthreads are currently freed at the end of the program
+    static pthread_mutex_t_ptr bootstrapMutex;
+    /* synchronize objectMonitorNatives and NativeObjectMonitor initialization */
+    static pthread_mutex_t_ptr objectMonitorNativesMutex;
     /* map Java object to native mutex for object monitor bytecodes. */
-    static HashMap<Object, NativeObjectMonitor> objectMonitorNatives = new HashMap();
+    static HashMap<Object, NativeObjectMonitor> objectMonitorNatives;
 
-    /* Force clinit to run early. most VMHelper methods will be replaced after clinit checks. */
-    public static void forceClinit() {}
+    static {
+        synchronizeObjectMonitorNativesStart();
+        objectMonitorNatives = new HashMap();
+        synchronizeObjectMonitorNativesStop();
+    }
+
+
+    /* Class initialization will be skipped for this method.
+     * Execute any operations here that need to be done before
+     * VMHelpers clinit is run.
+     */
+    public static void bootstrap() {
+        bootstrapMutex = createRecursivePthreadMutex();
+        objectMonitorNativesMutex = createRecursivePthreadMutex();
+        forceClinit();
+    }
+
+    /* Force VMHelpers clinit to run to initialize objectMonitorNatives.
+     * Initialization code is inserted specially in RuntimeChecksBBB.
+     */
+    private static void forceClinit() {}
 
     @NoSideEffects
     public static boolean instanceof_class(Object instance, Class<?> cls) {
@@ -124,50 +147,82 @@ public final class VMHelpers {
         }
     }
 
+    static pthread_mutex_t_ptr createRecursivePthreadMutex() {
+        ptr<?> attrVoid = malloc(sizeof(pthread_mutexattr_t.class));
+        if (attrVoid.isNull()) {
+            // TODO this will infinite loop if ever called
+            throw new OutOfMemoryError(/*"Allocation failed"*/);
+        }
+        ptr<pthread_mutexattr_t> attr = (ptr<pthread_mutexattr_t>) castPtr(attrVoid, pthread_mutexattr_t.class);
+
+        Stddef.size_t mutexSize = sizeof(pthread_mutex_t.class);
+        ptr<?> mVoid = malloc(word(mutexSize.longValue()));
+        if (mVoid.isNull()) {
+            // TODO this will infinite loop if ever called
+            throw new OutOfMemoryError(/*"Allocation failed"*/);
+        }
+        ptr<pthread_mutex_t> m = (ptr<pthread_mutex_t>) castPtr(mVoid, pthread_mutex_t.class);
+        omError(pthread_mutexattr_init((pthread_mutexattr_t_ptr) attr));
+        omError(pthread_mutexattr_settype((pthread_mutexattr_t_ptr) attr, PTHREAD_MUTEX_RECURSIVE));
+        omError(pthread_mutex_init((pthread_mutex_t_ptr) m, (const_pthread_mutexattr_t_ptr) attr));
+        omError(pthread_mutexattr_destroy((pthread_mutexattr_t_ptr) attr));
+        free(attrVoid);
+        return (pthread_mutex_t_ptr)m;
+    }
+
+    private static void monitor_enter_bootstrap() {
+        /* Use the bootstrap lock for initialize_class synchronization until VMHelpers has been fully initialized.
+         * This covers locking the clinitStates structure and individual states. Bootstrap locking
+         * for individual states happens < 10 times so just use the bootstrapMutex
+         * instead of creating new pthreads for each state.
+         */
+        omError(pthread_mutex_lock(bootstrapMutex));
+    }
+
+    private static void monitor_exit_bootstrap() {
+        omError(pthread_mutex_unlock(bootstrapMutex));
+    }
+
+    static void synchronizeObjectMonitorNativesStart() {
+        omError(pthread_mutex_lock(objectMonitorNativesMutex));
+    }
+
+    static void synchronizeObjectMonitorNativesStop() {
+        omError(pthread_mutex_unlock(objectMonitorNativesMutex));
+    }
+
     // TODO: mark this with a "NoInline" annotation
     static void monitor_enter(Object object) throws IllegalMonitorStateException {
-        /* TODO synchronization blocks are called from initialize_class before VMHelpers clinit is run */
-        if (objectMonitorNatives == null) return;
-
-        NativeObjectMonitor nom;
-        if ((nom = objectMonitorNatives.get(object)) != null) {
-            omError(pthread_mutex_lock(nom.getPthreadMutex()));
+        synchronizeObjectMonitorNativesStart();
+        if (objectMonitorNatives == null) {
+            monitor_enter_bootstrap();
+            return;
         } else {
-            ptr<?> attrVoid = malloc(sizeof(pthread_mutexattr_t.class));
-            if (attrVoid.isNull()) {
-                throw new OutOfMemoryError(/*"Allocation failed"*/);
+            NativeObjectMonitor nom;
+            if ((nom = objectMonitorNatives.get(object)) != null) {
+                omError(pthread_mutex_lock(nom.getPthreadMutex()));
+            } else {
+                nom = new NativeObjectMonitor(createRecursivePthreadMutex());
+                omError(pthread_mutex_lock(nom.getPthreadMutex()));
+                objectMonitorNatives.put(object, nom);
             }
-            ptr<pthread_mutexattr_t> attr = (ptr<pthread_mutexattr_t>) castPtr(attrVoid, pthread_mutexattr_t.class);
-
-            Stddef.size_t mutexSize = sizeof(pthread_mutex_t.class);
-            ptr<?> mVoid = malloc(word(mutexSize.longValue()));
-            if (mVoid.isNull()) {
-                throw new OutOfMemoryError(/*"Allocation failed"*/);
-            }
-            ptr<pthread_mutex_t> m = (ptr<pthread_mutex_t>) castPtr(mVoid, pthread_mutex_t.class);
-
-            omError(pthread_mutexattr_init((pthread_mutexattr_t_ptr) attr));
-            omError(pthread_mutexattr_settype((pthread_mutexattr_t_ptr) attr, PTHREAD_MUTEX_RECURSIVE));
-            omError(pthread_mutex_init((pthread_mutex_t_ptr) m, (const_pthread_mutexattr_t_ptr) attr));
-            omError(pthread_mutexattr_destroy((pthread_mutexattr_t_ptr) attr));
-            free(attrVoid);
-
-            nom = new NativeObjectMonitor((pthread_mutex_t_ptr) m);
-            omError(pthread_mutex_lock(nom.getPthreadMutex()));
-            objectMonitorNatives.put(object, nom);
         }
+        synchronizeObjectMonitorNativesStop();
     }
 
     // TODO: mark this with a "NoInline" annotation
     static void monitor_exit(Object object) throws IllegalMonitorStateException {
-        /* TODO synchronization blocks are called from initialize_class before VMHelpers clinit is run */
-        if (objectMonitorNatives == null) return;
-
-        NativeObjectMonitor nom = objectMonitorNatives.get(object);
-        if (null == nom) {
-            throw new IllegalMonitorStateException("native monitor could not be found for monitor_exit");
+        synchronizeObjectMonitorNativesStart();
+        if (objectMonitorNatives == null) {
+            monitor_exit_bootstrap();
+        } else {
+            NativeObjectMonitor nom = objectMonitorNatives.get(object);
+            if (null == nom) {
+                throw new IllegalMonitorStateException("native monitor could not be found for monitor_exit");
+            }
+            omError(pthread_mutex_unlock(nom.getPthreadMutex()));
         }
-        omError(pthread_mutex_unlock(nom.getPthreadMutex()));
+        synchronizeObjectMonitorNativesStop();
     }
 
     // TODO: mark this with a "NoInline" annotation
@@ -233,7 +288,6 @@ public final class VMHelpers {
         /* TODO: once we have Class objects for every class with a typeid, move
          * this state to the Class itself
          */
-
         ClinitState(Thread currentThread) {
             initializerThread = currentThread;
             initializedState = STATE_UNINITIALIZED;
@@ -342,6 +396,7 @@ public final class VMHelpers {
         // printTypeId(typeid);
         // putchar('>');
         // putchar('\n');
+
         ensureClinitStatesArray();
         if (ObjectModel.is_initialized(typeid)) {
             // early exit - is this right for getting the correct memory effects?

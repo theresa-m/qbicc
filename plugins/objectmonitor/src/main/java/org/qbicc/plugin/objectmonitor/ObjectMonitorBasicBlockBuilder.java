@@ -1,5 +1,4 @@
 package org.qbicc.plugin.objectmonitor;
-import java.lang.reflect.Method;
 import java.util.List;
 
 import org.qbicc.context.CompilationContext;
@@ -24,7 +23,6 @@ public class ObjectMonitorBasicBlockBuilder extends DelegatingBasicBlockBuilder 
         this.ctxt = ctxt;
     }
 
-    // TODO enable only test synchronized block for now
     public Node monitorEnter(final Value object) {
         return generateObjectMonitorFunctionCall(object, monitorEnterFunctionName);
     }

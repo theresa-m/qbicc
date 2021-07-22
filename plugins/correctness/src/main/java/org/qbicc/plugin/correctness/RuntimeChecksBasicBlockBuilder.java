@@ -120,18 +120,19 @@ public class RuntimeChecksBasicBlockBuilder extends DelegatingBasicBlockBuilder 
 
     @Override
     public Value new_(final ClassObjectType type) {
+        // TODO HashMap.newNode is not initialized because object monitors is infinitely looping...
+        // need to figure out how to initialize this properly
         if (originalElement instanceof MethodElement) {
             MethodElement me = (MethodElement) originalElement;
-            if (me.getSourceFileName().equals("VMHelpers.java") && me.getName().equals("monitor_enter")) {
-                // NativeObjectMonitor and OutOfMemoryError
-                return super.new_(type);
-            }
             if (me.getSourceFileName().equals("HashMap.java") && me.getName().equals("newNode")) {
-                // HashMAp.newNode
                 return super.new_(type);
             }
         }
-        initCheck(type);
+
+        /* Clinit is never needed for NativeObjectMonitor and would cause an infinite loop since class initialization depends on object monitors. */
+        if (!type.getDefinition().getInternalName().equals("org/qbicc/runtime/main/NativeObjectMonitor")) {
+            initCheck(type);
+        }
         return super.new_(type);
     }
 
@@ -322,6 +323,17 @@ public class RuntimeChecksBasicBlockBuilder extends DelegatingBasicBlockBuilder 
                 if (target.isVirtual()) {
                     throwIncompatibleClassChangeError();
                     throw Assert.unreachableCode();
+                }
+                /* Special bootstrap class initialization cases */
+                if (target.getSourceFileName().equals("VMHelpers.java")) {
+                    if (target.getName().equals("bootstrap")) {
+                        /* Bootstrap contains code that needs to be executed before the first class initialization. */
+                        return null;
+                    } else if (target.getName().equals("forceClinit")) {
+                        /* forceClinit is called within VMHelpers. Force an initialization. */
+                        classInitCheck(node.getExecutable().getEnclosingType().load().getType());
+                        return null;
+                    }
                 }
                 initCheck(node.getExecutable().getEnclosingType().load().getType());
                 // return value unused in this case

@@ -2,7 +2,9 @@ package org.qbicc.runtime.main;
 
 import org.qbicc.runtime.posix.PThread.pthread_mutex_t_ptr;
 
-/* object wrapper for native objectmonitor mutex. */
+/* object wrapper for native objectmonitor mutex.
+ *  Note: clinit is not run for this class, see RuntimeChecksBBB.
+ */
 public class NativeObjectMonitor {
     private final pthread_mutex_t_ptr pthread_mutex;
 

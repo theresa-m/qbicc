@@ -120,12 +120,15 @@ public class RuntimeChecksBasicBlockBuilder extends DelegatingBasicBlockBuilder 
 
     @Override
     public Value new_(final ClassObjectType type) {
-        // TODO HashMap.newNode is not initialized because object monitors is infinitely looping...
+        // TODO HashMap.newNode and HashMap.replacementTreeNode not initialized because object monitors is infinitely looping...
         // need to figure out how to initialize this properly
         if (originalElement instanceof MethodElement) {
             MethodElement me = (MethodElement) originalElement;
-            if (me.getSourceFileName().equals("HashMap.java") && me.getName().equals("newNode")) {
-                return super.new_(type);
+            if (me.getSourceFileName().equals("HashMap.java")) {
+                String name = me.getName();
+                if (name.equals("newNode") || name.equals("replacementTreeNode")) {
+                    return super.new_(type);
+                }
             }
         }
 

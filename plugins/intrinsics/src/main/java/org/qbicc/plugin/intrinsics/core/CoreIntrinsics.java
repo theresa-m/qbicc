@@ -981,9 +981,9 @@ public final class CoreIntrinsics {
         MethodDescriptor casDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, List.of(BaseTypeDescriptor.J, BaseTypeDescriptor.J, BaseTypeDescriptor.J));
         StaticIntrinsic setNom = (builder, target, arguments) -> {
             /* non atomic */
-            Value mutexSlot = builder.valueConvert(arguments.get(1), (SignedIntegerType)nativeObjectMonitorField.getType());
-            builder.store(builder.instanceFieldOf(builder.referenceHandle(arguments.get(0)), nativeObjectMonitorField), mutexSlot, MemoryAtomicityMode.NONE);
-            return ctxt.getLiteralFactory().literalOf(true);
+//            Value mutexSlot = builder.valueConvert(arguments.get(1), (SignedIntegerType)nativeObjectMonitorField.getType());
+//            builder.store(builder.instanceFieldOf(builder.referenceHandle(arguments.get(0)), nativeObjectMonitorField), mutexSlot, MemoryAtomicityMode.NONE);
+//            return ctxt.getLiteralFactory().literalOf(true);
 
             /* compareAndSwap version (TODO cas not implemented) */
 //            Value expr = builder.load(builder.instanceFieldOf(builder.referenceHandle(arguments.get(0)), nativeObjectMonitorField), MemoryAtomicityMode.NONE);
@@ -991,7 +991,16 @@ public final class CoreIntrinsics {
 //            Value update = builder.valueConvert(arguments.get(1), (SignedIntegerType)nativeObjectMonitorField.getType());
 //            ValueHandle valuesCompareAndSwap = builder.staticMethod(valsDesc, "compareAndSwap", casDesc);
 //            return builder.call(valuesCompareAndSwap, List.of(expr, expect, update));
+
+            /* cmpxchg instruction testing - TODO move this to compareAndSwap intrinsic */
+            ValueHandle nomTarget = builder.instanceFieldOf(builder.referenceHandle(arguments.get(0)), nativeObjectMonitorField);
+            Value expect = ctxt.getLiteralFactory().literalOf(0L);
+            Value update = builder.valueConvert(arguments.get(1), (SignedIntegerType)nativeObjectMonitorField.getType());
+            // TODO mem modes?
+            Value result = builder.cmpAndSwap(nomTarget, expect, update, MemoryAtomicityMode.MONOTONIC, MemoryAtomicityMode.MONOTONIC);
+            return ctxt.getLiteralFactory().literalOf(true); // TODO return an actual result
         };
+        // TODO update to LOWER
         intrinsics.registerIntrinsic(Phase.ADD, objModDesc, "set_nativeObjectMonitor", setNomDesc, setNom);
     }
 

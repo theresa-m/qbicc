@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
+import io.smallrye.common.constraint.Assert;
 import org.qbicc.context.AttachmentKey;
 import org.qbicc.context.CompilationContext;
 import org.qbicc.type.CompoundType;
@@ -35,12 +36,36 @@ public final class CmpAndSwap extends AbstractValue implements OrderedNode {
         this.updateValue = updateValue;
         this.successAtomicityMode = successAtomicityMode;
         this.failureAtomicityMode = failureAtomicityMode;
+
         if (! target.isWritable()) {
             throw new IllegalArgumentException("Handle is not writable");
         }
         if (! target.isReadable()) {
             throw new IllegalArgumentException("Handle is not readable");
         }
+
+        /* expected and update value must have the same type, target must be a pointer to that type. */
+        if (!expectedValue.getType().equals(updateValue.getType())
+             || !expectedValue.getType().equals(target.getPointerType().getPointeeType())
+        ) {
+            throw new IllegalArgumentException("The target, expected and new value types must agree.");
+        };
+
+        /* ordering params must be at least MONOTONIC */
+        if ((0 > successAtomicityMode.compareTo(MemoryAtomicityMode.MONOTONIC))
+            || (0 > failureAtomicityMode.compareTo(MemoryAtomicityMode.MONOTONIC))
+        ) {
+            throw new IllegalArgumentException("Mode must be at least monotonic");
+        }
+        /* volatile does not map to an ordering constraing */
+        if (successAtomicityMode.equals(MemoryAtomicityMode.VOLATILE) || failureAtomicityMode.equals(MemoryAtomicityMode.VOLATILE)) {
+            throw new IllegalArgumentException("volatile does not map to a LLVM ordering constraint");
+        }
+        /* failure ordering must not be RELEASE or ACQUIRE_RELEASE */
+        if (failureAtomicityMode.equals(MemoryAtomicityMode.RELEASE) || failureAtomicityMode.equals(MemoryAtomicityMode.ACQUIRE_RELEASE)) {
+            throw new IllegalArgumentException("Failure mode cannot be release or acquire_release");
+        }
+
     }
 
     int calcHashCode() {
@@ -113,7 +138,10 @@ public final class CmpAndSwap extends AbstractValue implements OrderedNode {
         CompoundType compoundType = map.get(valueType);
         if (compoundType == null) {
             TypeSystem ts = ctxt.getTypeSystem();
-            compoundType = ts.getCompoundType(CompoundType.Tag.NONE, null, -1, -1, () -> List.of(ts.getCompoundTypeMember(null, valueType, -1, -1), ts.getCompoundTypeMember(null, ts.getBooleanType(), -1, -1)));
+            CompoundType.Member resultMember = ts.getCompoundTypeMember("result", valueType, 0, valueType.getAlign());
+            CompoundType.Member isStrongMember = ts.getCompoundTypeMember("isStrong", ts.getBooleanType(), (int)valueType.getSize(), valueType.getAlign());
+            compoundType = ts.getCompoundType(CompoundType.Tag.NONE, null, valueType.getSize() + ts.getBooleanType().getSize(),
+                valueType.getAlign(), () -> List.of(resultMember, isStrongMember));
             CompoundType appearing = map.putIfAbsent(valueType, compoundType);
             if (appearing != null) {
                 compoundType = appearing;

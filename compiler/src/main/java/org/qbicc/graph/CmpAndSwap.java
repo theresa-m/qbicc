@@ -1,11 +1,9 @@
 package org.qbicc.graph;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-import io.smallrye.common.constraint.Assert;
 import org.qbicc.context.AttachmentKey;
 import org.qbicc.context.CompilationContext;
 import org.qbicc.type.CompoundType;
@@ -138,15 +136,30 @@ public final class CmpAndSwap extends AbstractValue implements OrderedNode {
         CompoundType compoundType = map.get(valueType);
         if (compoundType == null) {
             TypeSystem ts = ctxt.getTypeSystem();
-            CompoundType.Member resultMember = ts.getCompoundTypeMember("result", valueType, 0, valueType.getAlign());
-            CompoundType.Member isStrongMember = ts.getCompoundTypeMember("isStrong", ts.getBooleanType(), (int)valueType.getSize(), valueType.getAlign());
-            compoundType = ts.getCompoundType(CompoundType.Tag.NONE, null, valueType.getSize() + ts.getBooleanType().getSize(),
-                valueType.getAlign(), () -> List.of(resultMember, isStrongMember));
-            CompoundType appearing = map.putIfAbsent(valueType, compoundType);
-            if (appearing != null) {
-                compoundType = appearing;
-            }
+            compoundType = CompoundType.builder(ts)
+                .setTag(CompoundType.Tag.NONE)
+                .setName(null)
+                .addNextMember("actualValue", valueType)
+                .addNextMember("isStrong", ts.getBooleanType())
+                .setOverallAlignment(valueType.getAlign())
+                .build();
         }
         return compoundType;
+    }
+
+    /**
+     * Original value found in the CAS target
+     * @return value found in CAS target
+     */
+    public CompoundType.Member getResultValueType() {
+        return this.resultType.getMember(0);
+    }
+
+    /**
+     * Result flag where true indicates success, if the operation is marked as strong (default).
+     * @return result flag
+     */
+    public CompoundType.Member getResultFlagType() {
+        return this.resultType.getMember(1);
     }
 }

@@ -13,13 +13,16 @@ import org.qbicc.graph.BitCast;
 import org.qbicc.graph.BlockEarlyTermination;
 import org.qbicc.graph.BlockLabel;
 import org.qbicc.graph.ClassOf;
+import org.qbicc.graph.CmpAndSwap;
 import org.qbicc.graph.Extend;
+import org.qbicc.graph.ExtractMember;
 import org.qbicc.graph.Load;
 import org.qbicc.graph.MemoryAtomicityMode;
 import org.qbicc.graph.Value;
 import org.qbicc.graph.ValueHandle;
 import org.qbicc.graph.Variable;
 import org.qbicc.graph.literal.BooleanLiteral;
+import org.qbicc.graph.literal.IntegerLiteral;
 import org.qbicc.graph.literal.Literal;
 import org.qbicc.graph.literal.LiteralFactory;
 import org.qbicc.graph.literal.StringLiteral;
@@ -996,9 +999,10 @@ public final class CoreIntrinsics {
             ValueHandle nomTarget = builder.instanceFieldOf(builder.referenceHandle(arguments.get(0)), nativeObjectMonitorField);
             Value expect = ctxt.getLiteralFactory().literalOf(0L);
             Value update = builder.valueConvert(arguments.get(1), (SignedIntegerType)nativeObjectMonitorField.getType());
-            // TODO mem modes?
-            Value result = builder.cmpAndSwap(nomTarget, expect, update, MemoryAtomicityMode.MONOTONIC, MemoryAtomicityMode.MONOTONIC);
-            return ctxt.getLiteralFactory().literalOf(true); // TODO return an actual result
+            Value result = builder.cmpAndSwap(nomTarget, expect, update, MemoryAtomicityMode.SEQUENTIALLY_CONSISTENT, MemoryAtomicityMode.SEQUENTIALLY_CONSISTENT);
+            Value resultValue = builder.extractMember(result, ((CmpAndSwap)result).getResultValueType());
+            /* set was successful when expected value is returned */
+            return builder.isEq(resultValue, expect);
         };
         // TODO update to LOWER
         intrinsics.registerIntrinsic(Phase.ADD, objModDesc, "set_nativeObjectMonitor", setNomDesc, setNom);

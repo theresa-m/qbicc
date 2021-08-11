@@ -38,7 +38,8 @@ final class ExtractValueImpl extends AbstractYieldingInstruction implements Extr
         super.appendTo(target);
         target.append("extractvalue");
         target.append(' ');
-        aggregateType.appendTo(target);
+        //aggregateType.appendTo(target);
+        target.append("{ i64, i1 }");
         target.append(' ');
         aggregate.appendTo(target);
         ArgImpl lastArg = this.lastArg;

@@ -984,7 +984,6 @@ public final class CoreIntrinsics {
         MethodDescriptor setNomDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, List.of(objDesc, pthreadMutexDesc));
         MethodDescriptor casDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, Collections.nCopies(3, BaseTypeDescriptor.J));
         StaticIntrinsic setNom = (builder, target, arguments) -> {
-            /* (TODO CAS volatile?) */
             Value expr = builder.load(builder.instanceFieldOf(builder.referenceHandle(arguments.get(0)), nativeObjectMonitorField), MemoryAtomicityMode.NONE);
             Value expect = ctxt.getLiteralFactory().literalOf(0L);
             Value update = builder.valueConvert(arguments.get(1), (SignedIntegerType)nativeObjectMonitorField.getType());
@@ -1075,7 +1074,6 @@ public final class CoreIntrinsics {
                 Value expect = arguments.get(1);
                 Value update = arguments.get(2);
                 Value result = builder.cmpAndSwap(target, expect, update, successMode, failureMode, isVolatile);
-                // TODO not working with these 2 lines
                 Value resultValue = builder.extractMember(result, ((CmpAndSwap)result).getResultValueType());
                 /* set was successful when expected value is returned */
                 return builder.isEq(resultValue, expect);

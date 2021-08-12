@@ -147,8 +147,8 @@ public final class VMHelpers {
             if (!ObjectModel.set_nativeObjectMonitor(object, nom)) {
                 putchar('F');
                 /* atomic assignment failed, mutex has already been initialized for object. */
-                //free(nom);
-                //nom = ObjectModel.get_nativeObjectMonitor(object);
+                free(mVoid); /* free is looking for a pointer with no type */
+                nom = ObjectModel.get_nativeObjectMonitor(object);
             } else {
                 putchar('T');
             }

@@ -60,7 +60,7 @@ public final class CmpAndSwap extends AbstractValue implements OrderedNode {
         ) {
             throw new IllegalArgumentException("Mode must be at least monotonic");
         }
-        /* volatile does not map to an ordering constraing */
+        /* volatile does not map to an ordering constraint */
         if (successAtomicityMode.equals(MemoryAtomicityMode.VOLATILE) || failureAtomicityMode.equals(MemoryAtomicityMode.VOLATILE)) {
             throw new IllegalArgumentException("volatile does not map to a LLVM ordering constraint");
         }

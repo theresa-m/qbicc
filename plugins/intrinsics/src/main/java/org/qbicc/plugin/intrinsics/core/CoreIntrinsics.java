@@ -1,7 +1,6 @@
 package org.qbicc.plugin.intrinsics.core;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.ByteOrder;
 import java.util.Collections;
 import java.util.List;
@@ -16,14 +15,12 @@ import org.qbicc.graph.BlockLabel;
 import org.qbicc.graph.ClassOf;
 import org.qbicc.graph.CmpAndSwap;
 import org.qbicc.graph.Extend;
-import org.qbicc.graph.ExtractMember;
 import org.qbicc.graph.Load;
 import org.qbicc.graph.MemoryAtomicityMode;
 import org.qbicc.graph.Value;
 import org.qbicc.graph.ValueHandle;
 import org.qbicc.graph.Variable;
 import org.qbicc.graph.literal.BooleanLiteral;
-import org.qbicc.graph.literal.IntegerLiteral;
 import org.qbicc.graph.literal.Literal;
 import org.qbicc.graph.literal.LiteralFactory;
 import org.qbicc.graph.literal.StringLiteral;
@@ -978,7 +975,7 @@ public final class CoreIntrinsics {
             PointerType returnType = (PointerType)target.getType().getReturnType();
             return builder.valueConvert(mutexSlot, returnType);
         };
-        intrinsics.registerIntrinsic(Phase.LOWER, objModDesc, "get_nativeObjectMonitor", nomOfDesc, nomOf);
+        intrinsics.registerIntrinsic(objModDesc, "get_nativeObjectMonitor", nomOfDesc, nomOf);
 
         // boolean set_nativeObjectMonitor(Object object, PThread.pthread_mutex_t_ptr nom);
         MethodDescriptor setNomDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, List.of(objDesc, pthreadMutexDesc));
@@ -990,8 +987,7 @@ public final class CoreIntrinsics {
             ValueHandle valuesCompareAndSwap = builder.staticMethod(valsDesc, "compareAndSwap", casDesc);
             return builder.call(valuesCompareAndSwap, List.of(expr, expect, update));
         };
-        // TODO update to LOWER
-        intrinsics.registerIntrinsic(Phase.ADD, objModDesc, "set_nativeObjectMonitor", setNomDesc, setNom);
+        intrinsics.registerIntrinsic(objModDesc, "set_nativeObjectMonitor", setNomDesc, setNom);
     }
 
     static void registerOrgQbiccRuntimeValuesIntrinsics(final CompilationContext ctxt) {
@@ -1052,7 +1048,6 @@ public final class CoreIntrinsics {
         intrinsics.registerIntrinsic(valsDesc, "isAlwaysFalse", boolBoolDesc, isAlwaysFalse);
 
 
-        // TODO write tests
         // compareAndSwap*
         class CompareAndSwapIntrinsic implements StaticIntrinsic {
             private final MemoryAtomicityMode successMode;
@@ -1069,7 +1064,7 @@ public final class CoreIntrinsics {
             public Value emitIntrinsic(BasicBlockBuilder builder, MethodElement element, List<Value> arguments) {
                 ValueHandle target = getTarget(ctxt, builder, arguments.get(0));
                 if (target == null) {
-                    return arguments.get(0);
+                    return ctxt.getLiteralFactory().literalOf(false);
                 }
                 Value expect = arguments.get(1);
                 Value update = arguments.get(2);
@@ -1080,7 +1075,6 @@ public final class CoreIntrinsics {
             }
         }
 
-        // TODO used success/failure mode equivalents from rust
         StaticIntrinsic compareAndSwapVolatile = new CompareAndSwapIntrinsic(MemoryAtomicityMode.MONOTONIC, MemoryAtomicityMode.MONOTONIC, true);
         StaticIntrinsic compareAndSwapAcquire = new CompareAndSwapIntrinsic(MemoryAtomicityMode.ACQUIRE, MemoryAtomicityMode.ACQUIRE, false);
         StaticIntrinsic compareAndSwapRelease = new CompareAndSwapIntrinsic(MemoryAtomicityMode.RELEASE, MemoryAtomicityMode.MONOTONIC, false);
@@ -1097,7 +1091,6 @@ public final class CoreIntrinsics {
         intrinsics.registerIntrinsic(valsDesc, "compareAndSwap", boolObjObjObjDescriptor, compareAndSwap);
         intrinsics.registerIntrinsic(valsDesc, "compareAndSwap", boolIntIntIntDescriptor, compareAndSwap);
         intrinsics.registerIntrinsic(valsDesc, "compareAndSwap", boolLongLongLongDescriptor, compareAndSwap);
-
 
         class GetAndSetIntrinsic implements StaticIntrinsic {
             private final MemoryAtomicityMode mode;

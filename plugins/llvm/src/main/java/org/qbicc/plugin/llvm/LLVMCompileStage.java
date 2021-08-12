@@ -85,9 +85,6 @@ public class LLVMCompileStage implements Consumer<CompilationContext> {
                     optInvoker.setDestination(OutputDestination.of(optBitCodePath));
                     int errCnt = ctxt.errors();
                     try {
-                        if (moduleName.equals("VMHelpers.ll")) {
-                            baseName.toString();
-                        }
                         optInvoker.invoke();
                     } catch (IOException e) {
                         if (errCnt == ctxt.errors()) {

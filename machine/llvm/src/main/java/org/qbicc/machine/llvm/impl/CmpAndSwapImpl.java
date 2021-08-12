@@ -16,10 +16,10 @@ final class CmpAndSwapImpl extends AbstractYieldingInstruction implements CmpAnd
     private final OrderingConstraint successOrdering;
     private final OrderingConstraint failureOrdering;
     /* optional arguments */
-    private boolean weak;
+    private boolean weak;   /* not mapped from add phase */
     private final boolean isVolatile;
-    private String syncScope;
-    private int alignment;
+    private String syncScope;   /* not mapped from add phase */
+    private int alignment;  /* not mapped from add phase */
 
     public CmpAndSwapImpl(BasicBlockImpl block, AbstractValue pointerType, AbstractValue type, AbstractValue pointer,
                           AbstractValue expect, AbstractValue update, OrderingConstraint successOrdering,
@@ -35,27 +35,12 @@ final class CmpAndSwapImpl extends AbstractYieldingInstruction implements CmpAnd
         this.isVolatile = isVolatile;
     }
 
-    public CmpAndSwap comment(final String comment) {return (CmpAndSwap)super.comment(comment); }
-
-    public CmpAndSwap meta(final String name, final LLValue data) { return (CmpAndSwap)super.meta(name, data); }
-
-    public CmpAndSwap weak() {
-        this.weak = true;
-        return this;
+    public CmpAndSwap comment(final String comment) {
+        return (CmpAndSwap)super.comment(comment);
     }
 
-    public CmpAndSwap syncScope(final String scopeName) {
-        this.syncScope = scopeName;
-        return this;
-    }
-
-    public CmpAndSwap align(final int alignment) {
-        Assert.checkMinimumParameter("alignment", 1, alignment);
-        if (Integer.bitCount(alignment) != 1) {
-            throw new IllegalArgumentException("Alignment must be a power of two");
-        }
-        this.alignment = alignment;
-        return this;
+    public CmpAndSwap meta(final String name, final LLValue data) {
+        return (CmpAndSwap)super.meta(name, data);
     }
 
     public Appendable appendTo(final Appendable target) throws IOException {

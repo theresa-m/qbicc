@@ -379,7 +379,7 @@ public interface BasicBlockBuilder extends Locatable {
 
     Value getAndSub(ValueHandle target, Value update, MemoryAtomicityMode atomicityMode);
 
-    Value cmpAndSwap(ValueHandle target, Value expect, Value update, MemoryAtomicityMode successMode, MemoryAtomicityMode failureMode);
+    Value cmpAndSwap(ValueHandle target, Value expect, Value update, MemoryAtomicityMode successMode, MemoryAtomicityMode failureMode, boolean isVolatile);
 
     Node store(ValueHandle handle, Value value, MemoryAtomicityMode mode);
 

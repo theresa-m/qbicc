@@ -1162,8 +1162,10 @@ final class LLVMNodeVisitor implements NodeVisitor<Void, LLValue, Instruction, I
         LLValue update = map(node.getUpdateValue());
         OrderingConstraint successOrdering = getOC(node.getSuccessAtomicityMode());
         OrderingConstraint failureOrdering = getOC(node.getFailureAtomicityMode());
+        boolean isVolatile = node.getIsVolatile();
 
-        org.qbicc.machine.llvm.op.CmpAndSwap cmpAndSwapBuilder = builder.cmpAndSwap(ptrType, type, ptr, expect, update, successOrdering, failureOrdering);
+        org.qbicc.machine.llvm.op.CmpAndSwap cmpAndSwapBuilder = builder.cmpAndSwap(ptrType, type, ptr, expect, update,
+            successOrdering, failureOrdering, isVolatile);
         return cmpAndSwapBuilder.asLocal();
     }
 

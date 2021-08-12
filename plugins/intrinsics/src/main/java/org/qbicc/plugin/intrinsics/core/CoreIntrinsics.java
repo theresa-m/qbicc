@@ -1,6 +1,7 @@
 package org.qbicc.plugin.intrinsics.core;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.ByteOrder;
 import java.util.Collections;
 import java.util.List;
@@ -981,28 +982,14 @@ public final class CoreIntrinsics {
 
         // boolean set_nativeObjectMonitor(Object object, PThread.pthread_mutex_t_ptr nom);
         MethodDescriptor setNomDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, List.of(objDesc, pthreadMutexDesc));
-        MethodDescriptor casDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, List.of(BaseTypeDescriptor.J, BaseTypeDescriptor.J, BaseTypeDescriptor.J));
+        MethodDescriptor casDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, Collections.nCopies(3, BaseTypeDescriptor.J));
         StaticIntrinsic setNom = (builder, target, arguments) -> {
-            /* non atomic */
-//            Value mutexSlot = builder.valueConvert(arguments.get(1), (SignedIntegerType)nativeObjectMonitorField.getType());
-//            builder.store(builder.instanceFieldOf(builder.referenceHandle(arguments.get(0)), nativeObjectMonitorField), mutexSlot, MemoryAtomicityMode.NONE);
-//            return ctxt.getLiteralFactory().literalOf(true);
-
-            /* compareAndSwap version (TODO cas not implemented) */
-//            Value expr = builder.load(builder.instanceFieldOf(builder.referenceHandle(arguments.get(0)), nativeObjectMonitorField), MemoryAtomicityMode.NONE);
-//            Value expect = ctxt.getLiteralFactory().literalOf(0L);
-//            Value update = builder.valueConvert(arguments.get(1), (SignedIntegerType)nativeObjectMonitorField.getType());
-//            ValueHandle valuesCompareAndSwap = builder.staticMethod(valsDesc, "compareAndSwap", casDesc);
-//            return builder.call(valuesCompareAndSwap, List.of(expr, expect, update));
-
-            /* cmpxchg instruction testing - TODO move this to compareAndSwap intrinsic */
-            ValueHandle nomTarget = builder.instanceFieldOf(builder.referenceHandle(arguments.get(0)), nativeObjectMonitorField);
+            /* (TODO CAS volatile?) */
+            Value expr = builder.load(builder.instanceFieldOf(builder.referenceHandle(arguments.get(0)), nativeObjectMonitorField), MemoryAtomicityMode.NONE);
             Value expect = ctxt.getLiteralFactory().literalOf(0L);
             Value update = builder.valueConvert(arguments.get(1), (SignedIntegerType)nativeObjectMonitorField.getType());
-            Value result = builder.cmpAndSwap(nomTarget, expect, update, MemoryAtomicityMode.SEQUENTIALLY_CONSISTENT, MemoryAtomicityMode.SEQUENTIALLY_CONSISTENT);
-            Value resultValue = builder.extractMember(result, ((CmpAndSwap)result).getResultValueType());
-            /* set was successful when expected value is returned */
-            return builder.isEq(resultValue, expect);
+            ValueHandle valuesCompareAndSwap = builder.staticMethod(valsDesc, "compareAndSwap", casDesc);
+            return builder.call(valuesCompareAndSwap, List.of(expr, expect, update));
         };
         // TODO update to LOWER
         intrinsics.registerIntrinsic(Phase.ADD, objModDesc, "set_nativeObjectMonitor", setNomDesc, setNom);
@@ -1039,6 +1026,10 @@ public final class CoreIntrinsics {
         MethodDescriptor longLongDescriptor = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.J, List.of(BaseTypeDescriptor.J));
         MethodDescriptor intIntDescriptor = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.J, List.of(BaseTypeDescriptor.J));
 
+        MethodDescriptor boolObjObjObjDescriptor = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, Collections.nCopies(3, objDesc));
+        MethodDescriptor boolLongLongLongDescriptor = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, Collections.nCopies(3, BaseTypeDescriptor.J));
+        MethodDescriptor boolIntIntIntDescriptor = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, Collections.nCopies(3, BaseTypeDescriptor.I));
+
         // isConstant
 
         StaticIntrinsic isConstant = (builder, target, arguments) -> literalOf(ctxt, arguments.get(0) instanceof Literal);
@@ -1061,9 +1052,54 @@ public final class CoreIntrinsics {
         StaticIntrinsic isAlwaysFalse = (builder, target, arguments) -> literalOf(ctxt, arguments.get(0) instanceof BooleanLiteral && ((BooleanLiteral) arguments.get(0)).booleanValue());
         intrinsics.registerIntrinsic(valsDesc, "isAlwaysFalse", boolBoolDesc, isAlwaysFalse);
 
-        // todo: compareAndSwap*
 
-        // getAndSet*
+        // TODO write tests
+        // compareAndSwap*
+        class CompareAndSwapIntrinsic implements StaticIntrinsic {
+            private final MemoryAtomicityMode successMode;
+            private final MemoryAtomicityMode failureMode;
+            private final boolean isVolatile;
+            CompareAndSwapIntrinsic(final MemoryAtomicityMode successMode, final MemoryAtomicityMode failureMode,
+                                    boolean isVolatile) {
+                this.successMode = successMode;
+                this.failureMode = failureMode;
+                this.isVolatile = isVolatile;
+            }
+
+            @Override
+            public Value emitIntrinsic(BasicBlockBuilder builder, MethodElement element, List<Value> arguments) {
+                ValueHandle target = getTarget(ctxt, builder, arguments.get(0));
+                if (target == null) {
+                    return arguments.get(0);
+                }
+                Value expect = arguments.get(1);
+                Value update = arguments.get(2);
+                Value result = builder.cmpAndSwap(target, expect, update, successMode, failureMode, isVolatile);
+                // TODO not working with these 2 lines
+                Value resultValue = builder.extractMember(result, ((CmpAndSwap)result).getResultValueType());
+                /* set was successful when expected value is returned */
+                return builder.isEq(resultValue, expect);
+            }
+        }
+
+        // TODO used success/failure mode equivalents from rust
+        StaticIntrinsic compareAndSwapVolatile = new CompareAndSwapIntrinsic(MemoryAtomicityMode.MONOTONIC, MemoryAtomicityMode.MONOTONIC, true);
+        StaticIntrinsic compareAndSwapAcquire = new CompareAndSwapIntrinsic(MemoryAtomicityMode.ACQUIRE, MemoryAtomicityMode.ACQUIRE, false);
+        StaticIntrinsic compareAndSwapRelease = new CompareAndSwapIntrinsic(MemoryAtomicityMode.RELEASE, MemoryAtomicityMode.MONOTONIC, false);
+        StaticIntrinsic compareAndSwap = new CompareAndSwapIntrinsic(MemoryAtomicityMode.MONOTONIC, MemoryAtomicityMode.MONOTONIC, false);
+        intrinsics.registerIntrinsic(valsDesc, "compareAndSwapVolatile", boolObjObjObjDescriptor, compareAndSwapVolatile);
+        intrinsics.registerIntrinsic(valsDesc, "compareAndSwapVolatile",  boolIntIntIntDescriptor, compareAndSwapVolatile);
+        intrinsics.registerIntrinsic(valsDesc, "compareAndSwapVolatile", boolLongLongLongDescriptor, compareAndSwapVolatile);
+        intrinsics.registerIntrinsic(valsDesc, "compareAndSwapAcquire", boolObjObjObjDescriptor, compareAndSwapAcquire);
+        intrinsics.registerIntrinsic(valsDesc, "compareAndSwapAcquire", boolIntIntIntDescriptor, compareAndSwapAcquire);
+        intrinsics.registerIntrinsic(valsDesc, "compareAndSwapAcquire", boolLongLongLongDescriptor, compareAndSwapAcquire);
+        intrinsics.registerIntrinsic(valsDesc, "compareAndSwapRelease", boolObjObjObjDescriptor, compareAndSwapRelease);
+        intrinsics.registerIntrinsic(valsDesc, "compareAndSwapRelease", boolIntIntIntDescriptor, compareAndSwapRelease);
+        intrinsics.registerIntrinsic(valsDesc, "compareAndSwapRelease", boolLongLongLongDescriptor, compareAndSwapRelease);
+        intrinsics.registerIntrinsic(valsDesc, "compareAndSwap", boolObjObjObjDescriptor, compareAndSwap);
+        intrinsics.registerIntrinsic(valsDesc, "compareAndSwap", boolIntIntIntDescriptor, compareAndSwap);
+        intrinsics.registerIntrinsic(valsDesc, "compareAndSwap", boolLongLongLongDescriptor, compareAndSwap);
+
 
         class GetAndSetIntrinsic implements StaticIntrinsic {
             private final MemoryAtomicityMode mode;

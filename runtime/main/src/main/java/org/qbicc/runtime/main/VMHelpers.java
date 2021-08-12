@@ -147,13 +147,13 @@ public final class VMHelpers {
             if (!ObjectModel.set_nativeObjectMonitor(object, nom)) {
                 putchar('F');
                 /* atomic assignment failed, mutex has already been initialized for object. */
-                free(m);
-                nom = ObjectModel.get_nativeObjectMonitor(object);
+                //free(m);
+                //nom = ObjectModel.get_nativeObjectMonitor(object);
             } else {
                 putchar('T');
             }
         }
-        omError(pthread_mutex_lock(nom));
+        //omError(pthread_mutex_lock(nom));
     }
 
     // TODO: mark this with a "NoInline" annotation

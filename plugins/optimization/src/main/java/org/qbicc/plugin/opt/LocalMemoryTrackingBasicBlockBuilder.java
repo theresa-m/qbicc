@@ -115,9 +115,10 @@ public class LocalMemoryTrackingBasicBlockBuilder extends DelegatingBasicBlockBu
     }
 
     @Override
-    public Value cmpAndSwap(ValueHandle target, Value expect, Value update, MemoryAtomicityMode successMode, MemoryAtomicityMode failureMode) {
+    public Value cmpAndSwap(ValueHandle target, Value expect, Value update, MemoryAtomicityMode successMode,
+                            MemoryAtomicityMode failureMode, boolean isVolatile) {
         knownValues.clear();
-        return super.cmpAndSwap(target, expect, update, successMode, failureMode);
+        return super.cmpAndSwap(target, expect, update, successMode, failureMode, isVolatile);
     }
 
     @Override

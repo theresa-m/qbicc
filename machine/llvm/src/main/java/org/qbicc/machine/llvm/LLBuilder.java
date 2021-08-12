@@ -148,7 +148,7 @@ public interface LLBuilder {
     Alloca alloca(LLValue type);
 
     CmpAndSwap cmpAndSwap(final LLValue pointerType, final LLValue type, final LLValue pointer, final LLValue expect, final LLValue update,
-                          final OrderingConstraint successOrdering, final OrderingConstraint failureOrdering);
+                          final OrderingConstraint successOrdering, final OrderingConstraint failureOrdering, final boolean isVolatile);
 
     static LLBuilder newBuilder(LLBasicBlock block) {
         return LLVM.newBuilder(block);

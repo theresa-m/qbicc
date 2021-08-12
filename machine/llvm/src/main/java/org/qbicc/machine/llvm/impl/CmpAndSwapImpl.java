@@ -17,13 +17,13 @@ final class CmpAndSwapImpl extends AbstractYieldingInstruction implements CmpAnd
     private final OrderingConstraint failureOrdering;
     /* optional arguments */
     private boolean weak;
-    private boolean volatile_;
+    private final boolean isVolatile;
     private String syncScope;
     private int alignment;
 
     public CmpAndSwapImpl(BasicBlockImpl block, AbstractValue pointerType, AbstractValue type, AbstractValue pointer,
                           AbstractValue expect, AbstractValue update, OrderingConstraint successOrdering,
-                          OrderingConstraint failureOrdering) {
+                          OrderingConstraint failureOrdering, boolean isVolatile) {
         super(block);
         this.pointerType = pointerType;
         this.type = type;
@@ -32,6 +32,7 @@ final class CmpAndSwapImpl extends AbstractYieldingInstruction implements CmpAnd
         this.update = update;
         this.successOrdering = successOrdering;
         this.failureOrdering = failureOrdering;
+        this.isVolatile = isVolatile;
     }
 
     public CmpAndSwap comment(final String comment) {return (CmpAndSwap)super.comment(comment); }
@@ -40,11 +41,6 @@ final class CmpAndSwapImpl extends AbstractYieldingInstruction implements CmpAnd
 
     public CmpAndSwap weak() {
         this.weak = true;
-        return this;
-    }
-
-    public CmpAndSwap volatile_() {
-        this.volatile_ = true;
         return this;
     }
 
@@ -73,7 +69,7 @@ final class CmpAndSwapImpl extends AbstractYieldingInstruction implements CmpAnd
         }
 
         /* volatile */
-        if (volatile_) {
+        if (isVolatile) {
             space(target);
             target.append("volatile");
         }

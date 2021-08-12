@@ -24,8 +24,12 @@ public final class CmpAndSwap extends AbstractValue implements OrderedNode {
     private final CompoundType resultType;
     private final MemoryAtomicityMode successAtomicityMode;
     private final MemoryAtomicityMode failureAtomicityMode;
+    private final boolean isVolatile;
 
-    CmpAndSwap(final Node callSite, final ExecutableElement element, final int line, final int bci, final CompoundType resultType, final Node dependency, final ValueHandle target, final Value expectedValue, final Value updateValue, final MemoryAtomicityMode successAtomicityMode, final MemoryAtomicityMode failureAtomicityMode) {
+    CmpAndSwap(final Node callSite, final ExecutableElement element, final int line, final int bci, final CompoundType resultType,
+               final Node dependency, final ValueHandle target, final Value expectedValue, final Value updateValue,
+               final MemoryAtomicityMode successAtomicityMode, final MemoryAtomicityMode failureAtomicityMode, final boolean isVolatile
+    ) {
         super(callSite, element, line, bci);
         this.resultType = resultType;
         this.dependency = dependency;
@@ -34,6 +38,7 @@ public final class CmpAndSwap extends AbstractValue implements OrderedNode {
         this.updateValue = updateValue;
         this.successAtomicityMode = successAtomicityMode;
         this.failureAtomicityMode = failureAtomicityMode;
+        this.isVolatile = isVolatile;
 
         if (! target.isWritable()) {
             throw new IllegalArgumentException("Handle is not writable");
@@ -67,7 +72,7 @@ public final class CmpAndSwap extends AbstractValue implements OrderedNode {
     }
 
     int calcHashCode() {
-        return Objects.hash(CmpAndSwap.class, dependency, target, expectedValue, updateValue, successAtomicityMode, failureAtomicityMode);
+        return Objects.hash(CmpAndSwap.class, dependency, target, expectedValue, updateValue, resultType, successAtomicityMode, failureAtomicityMode, isVolatile);
     }
 
     public CompoundType getType() {
@@ -102,6 +107,10 @@ public final class CmpAndSwap extends AbstractValue implements OrderedNode {
         return failureAtomicityMode;
     }
 
+    public boolean getIsVolatile() {
+        return isVolatile;
+    }
+
     public boolean equals(final Object other) {
         return other instanceof CmpAndSwap && equals((CmpAndSwap) other);
     }
@@ -109,7 +118,8 @@ public final class CmpAndSwap extends AbstractValue implements OrderedNode {
     public boolean equals(final CmpAndSwap other) {
         return this == other || other != null && dependency.equals(other.dependency) && target.equals(other.target)
             && expectedValue.equals(other.expectedValue) && updateValue.equals(other.updateValue)
-            && successAtomicityMode == other.successAtomicityMode && failureAtomicityMode == other.failureAtomicityMode;
+            && resultType.equals(other.resultType) && successAtomicityMode == other.successAtomicityMode
+            && failureAtomicityMode == other.failureAtomicityMode && isVolatile == other.isVolatile;
     }
 
     public int getValueDependencyCount() {

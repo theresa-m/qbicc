@@ -83,8 +83,9 @@ public class StaticFieldLoweringBasicBlockBuilder extends DelegatingBasicBlockBu
     }
 
     @Override
-    public Value cmpAndSwap(ValueHandle target, Value expect, Value update, MemoryAtomicityMode successMode, MemoryAtomicityMode failureMode) {
-        return super.cmpAndSwap(transform(target), expect, update, successMode, failureMode);
+    public Value cmpAndSwap(ValueHandle target, Value expect, Value update, MemoryAtomicityMode successMode,
+                            MemoryAtomicityMode failureMode, boolean isVolatile) {
+        return super.cmpAndSwap(transform(target), expect, update, successMode, failureMode, isVolatile);
     }
 
     @Override

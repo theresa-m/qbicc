@@ -448,7 +448,8 @@ final class BuilderImpl implements LLBuilder {
     }
 
     public CmpAndSwap cmpAndSwap(final LLValue pointerType, final LLValue  type, final LLValue pointer, final LLValue expect,
-                                 final LLValue update, final OrderingConstraint successOrdering, final OrderingConstraint failureOrdering) {
+                                 final LLValue update, final OrderingConstraint successOrdering, final OrderingConstraint failureOrdering,
+                                 final boolean isVolatile) {
         Assert.checkNotNullParam("pointerType", pointerType);
         Assert.checkNotNullParam("type", type);
         Assert.checkNotNullParam("pointer", pointer);
@@ -457,6 +458,6 @@ final class BuilderImpl implements LLBuilder {
         Assert.checkNotNullParam("successOrdering", successOrdering);
         Assert.checkNotNullParam("failureOrdering", failureOrdering);
         return append(new CmpAndSwapImpl(block, (AbstractValue) pointerType, (AbstractValue)type, (AbstractValue)pointer,
-            (AbstractValue)expect, (AbstractValue)update, successOrdering, failureOrdering));
+            (AbstractValue)expect, (AbstractValue)update, successOrdering, failureOrdering, isVolatile));
     }
 }

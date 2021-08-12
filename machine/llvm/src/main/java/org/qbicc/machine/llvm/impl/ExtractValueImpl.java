@@ -36,18 +36,13 @@ final class ExtractValueImpl extends AbstractYieldingInstruction implements Extr
 
     public Appendable appendTo(final Appendable target) throws IOException {
         super.appendTo(target);
-        target.append("extractvalue { i64, i1 } ");
+        target.append("extractvalue");
+        target.append(' ');
+        target.append("{ i64, i1 }"); // TODO aggregateType
+        //aggregateType.appendTo(target);
+        target.append(' ');
         aggregate.appendTo(target);
-        target.append(", 0");
-//        target.append("extractvalue");
-//        target.append(' ');
-//        //aggregateType.appendTo(target);
-//        target.append("{ i64, i1 }");
-//        target.append(' ');
-//        aggregate.appendTo(target);
-//        ArgImpl lastArg = this.lastArg;
-//        // TODO there must be at least one index
-//        lastArg.appendTo(target);
+        lastArg.appendTo(target);
         return appendTrailer(target);
     }
 

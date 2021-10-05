@@ -34,11 +34,13 @@ import org.qbicc.graph.literal.Literal;
 import org.qbicc.graph.literal.LiteralFactory;
 import org.qbicc.graph.literal.ObjectLiteral;
 import org.qbicc.graph.literal.StringLiteral;
+import org.qbicc.graph.literal.SymbolLiteral;
 import org.qbicc.graph.literal.TypeLiteral;
 import org.qbicc.graph.literal.UndefinedLiteral;
 import org.qbicc.interpreter.VmObject;
 import org.qbicc.interpreter.VmString;
 import org.qbicc.machine.probe.CProbe;
+import org.qbicc.object.FunctionDeclaration;
 import org.qbicc.plugin.coreclasses.CoreClasses;
 import org.qbicc.plugin.instanceofcheckcast.SupersDisplayTables;
 import org.qbicc.plugin.intrinsics.InstanceIntrinsic;
@@ -440,7 +442,11 @@ public final class CoreIntrinsics {
 
             /* pass threadWrapper as function_ptr - TODO this will eventually be replaced by a call to CNative.addr_of_function */
             MethodElement threadWrapperEE = ctxt.getVMHelperMethod("threadWrapper");
-            Literal functionParamLiteral = ctxt.getLiteralFactory().functionLiteralOf(threadWrapperEE.getName(), threadWrapperEE.getType());
+            //Literal functionParamLiteral = ctxt.getLiteralFactory().functionLiteralOf(threadWrapperEE.getName(), threadWrapperEE.getType());
+
+            SymbolLiteral funcSymbol = ctxt.getLiteralFactory().literalOfSymbol("threadWrapper", threadWrapperEE.getType());
+            FunctionDeclaration fd = new FunctionDeclaration(threadWrapperEE, "threadWrapper", funcSymbol);
+            Value functionValue = builder.addressOf(builder.functionOf(fd));
 
             /* call threadWrapper with null parameter so it does nothing - TODO this is a workaround to create a declares statement for threadWrapper in java.lang.Thread */
             ValueType paramType = threadWrapperEE.getParameters().get(0).getType();
@@ -452,7 +458,7 @@ public final class CoreIntrinsics {
             Value threadVoidPtr = builder.bitCast(instance, (WordType)paramType);
 
             /* start pthread in VMHelpers */
-            builder.call(builder.staticMethod(vmHelpersDesc, "JLT_start0", JLT_start0Desc), List.of(functionParamLiteral, threadVoidPtr));
+            builder.call(builder.staticMethod(vmHelpersDesc, "JLT_start0", JLT_start0Desc), List.of(functionValue, threadVoidPtr));
 
             return ctxt.getLiteralFactory().zeroInitializerLiteralOfType(ctxt.getTypeSystem().getVoidType());
         };

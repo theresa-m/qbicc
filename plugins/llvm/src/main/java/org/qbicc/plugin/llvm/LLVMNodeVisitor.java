@@ -100,6 +100,7 @@ import org.qbicc.machine.llvm.Module;
 import org.qbicc.machine.llvm.ParameterAttributes;
 import org.qbicc.machine.llvm.Values;
 import org.qbicc.machine.llvm.debuginfo.MetadataNode;
+import org.qbicc.machine.llvm.impl.FunctionParameterConstant;
 import org.qbicc.machine.llvm.impl.LLVM;
 import org.qbicc.machine.llvm.op.AtomicRmw;
 import org.qbicc.machine.llvm.op.Call;
@@ -1064,6 +1065,11 @@ final class LLVMNodeVisitor implements NodeVisitor<Void, LLValue, Instruction, I
                 arg.attribute(ParameterAttributes.zeroext);
             }
         }
+    }
+
+    public GetElementPtr visit(final Void param, final FunctionDeclarationHandle node) {
+        LLValue functionValue = new FunctionParameterConstant(node.getProgramObject().getName());
+        return gep(functionValue, node);
     }
 
     private LLValue getCallTarget(final ValueHandle valueHandle) {

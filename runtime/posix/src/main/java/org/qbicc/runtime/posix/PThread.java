@@ -4,6 +4,7 @@ import static org.qbicc.runtime.CNative.*;
 import static org.qbicc.runtime.stdc.Signal.*;
 import static org.qbicc.runtime.stdc.Stddef.*;
 
+import java.lang.annotation.Documented;
 import java.util.function.UnaryOperator;
 
 import org.qbicc.runtime.NoReturn;
@@ -53,6 +54,15 @@ public final class PThread {
     public static final class const_pthread_mutexattr_t_ptr_ptr extends ptr<const_pthread_mutexattr_t_ptr> {}
     public static final class pthread_mutexattr_t_ptr_const_ptr extends ptr<@c_const pthread_mutexattr_t_ptr> {}
     public static final class const_pthread_mutexattr_t_ptr_const_ptr extends ptr<@c_const const_pthread_mutexattr_t_ptr> {}
+
+    @internal
+    public static final class native_thread extends object {
+        public int test;
+        public java.lang.Thread threadObject;
+        public ptr<pthread_t> pthread;
+        //public native_thread_ptr next;
+    }
+    public static final class native_thread_ptr extends ptr<native_thread> {}
 
     public static native c_int pthread_attr_init(pthread_attr_t_ptr attr);
     public static native c_int pthread_attr_destroy(pthread_attr_t_ptr attr);

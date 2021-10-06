@@ -94,7 +94,11 @@ final class NativeInfo {
         return nativeInfo;
     }
 
+    // TODO change order for c structs
     ValueType resolveInternalNativeType(final DefinedTypeDefinition definedType) {
+        if (definedType.getInternalName().contains("native_thread")) {
+            definedType.getInternalName();
+        }
         AtomicReference<ValueType> ref = internalNativeTypes.get(definedType);
         if (ref == null) {
             return null;

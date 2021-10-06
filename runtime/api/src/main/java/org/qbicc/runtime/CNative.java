@@ -911,6 +911,11 @@ public final class CNative {
          *         it cannot be determined
          */
         public native boolean isPinned();
+
+        public native int getIntElement(String name);
+        public native T getElement(T type, String name);
+
+        public native void setIntElement(String name);
     }
 
     public static final class void_ptr extends ptr<c_void> {}
@@ -1263,7 +1268,7 @@ public final class CNative {
      * default algorithm based on the members of the type.
      */
     @Target(ElementType.TYPE)
-    @Retention(RetentionPolicy.CLASS)
+    @Retention(RetentionPolicy.RUNTIME)
     @Documented
     public @interface internal {
     }

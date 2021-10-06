@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.qbicc.context.ClassContext;
+import com.sun.jdi.Method;
 import org.qbicc.context.CompilationContext;
 import org.qbicc.driver.Driver;
 import org.qbicc.driver.Phase;
@@ -379,6 +380,7 @@ public final class CoreIntrinsics {
         ClassTypeDescriptor pthreadPtrDesc = ClassTypeDescriptor.synthesize(classContext, "org/qbicc/runtime/posix/PThread$pthread_t_ptr");
         ClassTypeDescriptor voidPtrDesc = ClassTypeDescriptor.synthesize(classContext, "org/qbicc/runtime/CNative$void_ptr");
         ClassTypeDescriptor voidUnaryfunctionPtrDesc = ClassTypeDescriptor.synthesize(classContext, "org/qbicc/runtime/CNative$void_ptr_unaryoperator_function_ptr");
+        ClassTypeDescriptor vmDesc = ClassTypeDescriptor.synthesize(classContext, "org/qbicc/runtime/main/VM");
 
         MethodDescriptor returnJlt = MethodDescriptor.synthesize(classContext, jltDesc, List.of());
         MethodDescriptor voidDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.V, List.of());
@@ -396,13 +398,11 @@ public final class CoreIntrinsics {
         intrinsics.registerIntrinsic(jltDesc, "currentThread", returnJlt, currentThread);
 
         /* VMHelpers.java - threadWrapper: helper method for java.lang.Thread.start0 */
+        LoadedTypeDefinition jltVal = classContext.findDefinedType("java/lang/Thread").load();
+        ValueType jltType = jltVal.getType().getReference();
         MethodDescriptor threadWrapperNativeDesc = MethodDescriptor.synthesize(classContext, voidPtrDesc, List.of(voidPtrDesc));
         StaticIntrinsic threadWrapperNative = (builder, target, arguments) -> {
             Value threadVoidPtr = arguments.get(0);
-
-            DefinedTypeDefinition jlt = classContext.findDefinedType("java/lang/Thread");
-            LoadedTypeDefinition jltVal = jlt.load();
-            ValueType jltType = jltVal.getType().getReference();
             Value threadObject = builder.bitCast(threadVoidPtr, (WordType)jltType);
             ValueHandle threadObjectHandle = builder.referenceHandle(threadObject);
 
@@ -425,8 +425,14 @@ public final class CoreIntrinsics {
         /* VMHelpers.java - saveNativeThread: helper method for java.lang.Thread.start0 */
         MethodDescriptor saveNativeThreadDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, List.of(voidPtrDesc, pthreadPtrDesc));
         StaticIntrinsic saveNativeThread = (builder, target, arguments) -> {
-            // TODO implement
-            return ctxt.getLiteralFactory().literalOf(true);
+            Value threadVoidPtr = arguments.get(0);
+            Value threadObject = builder.bitCast(threadVoidPtr, (WordType)jltType);
+            Value pthread = arguments.get(1);
+
+            MethodDescriptor vmAddToNativeThreadListDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, List.of(jltDesc, pthreadPtrDesc));
+            ValueHandle vmAddToNativeThreadList = builder.staticMethod(vmDesc, "addToNativeThreadList", vmAddToNativeThreadListDesc);
+            return builder.call(vmAddToNativeThreadList, List.of(threadObject, pthread));
+            //return ctxt.getLiteralFactory().literalOf(true);
         };
         intrinsics.registerIntrinsic(vmHelpersDesc, "saveNativeThread", saveNativeThreadDesc, saveNativeThread);
 
@@ -811,6 +817,25 @@ public final class CoreIntrinsics {
         intrinsics.registerIntrinsic(ptrDesc, "minus", MethodDescriptor.synthesize(classContext, ptrDesc, List.of(BaseTypeDescriptor.I)), minus);
         intrinsics.registerIntrinsic(ptrDesc, "minus", MethodDescriptor.synthesize(classContext, ptrDesc, List.of(ptrDiffTDesc)), minus);
         intrinsics.registerIntrinsic(ptrDesc, "minus", MethodDescriptor.synthesize(classContext, ptrDesc, List.of(sizeTDesc)), minus);
+
+
+        MethodDescriptor setIntElementDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.V, List.of(strDesc));
+        MethodDescriptor getIntElementDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.I, List.of(strDesc));
+
+        InstanceIntrinsic setIntElement = (builder, instance, target, arguments) -> {
+            Value structPtr = builder.load(builder.pointerHandle(instance), MemoryAtomicityMode.NONE);
+            //builder.memberOf(structPtr, )
+            return ctxt.getLiteralFactory().zeroInitializerLiteralOfType(target.getType().getReturnType());
+        };
+
+        InstanceIntrinsic getIntElement = (builder, instance, target, arguments) -> {
+            // TODO
+            return ctxt.getLiteralFactory().zeroInitializerLiteralOfType(target.getType().getReturnType());
+        };
+
+        intrinsics.registerIntrinsic(ptrDesc, "setIntElement", setIntElementDesc, setIntElement);
+        intrinsics.registerIntrinsic(ptrDesc, "getIntElement", getIntElementDesc, getIntElement);
+
 
         InstanceIntrinsic castToType = (builder, input, target, arguments) -> {
             Value arg0 = arguments.get(0);

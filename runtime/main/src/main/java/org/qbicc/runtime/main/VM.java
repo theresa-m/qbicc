@@ -1,6 +1,8 @@
 package org.qbicc.runtime.main;
 
 import static org.qbicc.runtime.CNative.*;
+import static org.qbicc.runtime.stdc.Stdlib.malloc;
+import static org.qbicc.runtime.posix.PThread.*;
 
 import org.qbicc.runtime.ThreadScoped;
 
@@ -19,6 +21,57 @@ public final class VM {
     @export
     @SuppressWarnings("unused")
     static Thread _qbicc_bound_thread;
+
+    // TODO manually create a linked list - don't want to use fancy java classes if this will be used by the GC
+    // TODO what about the first thread? will that be recorded?
+//    static native_thread_ptr _native_thread_list;
+//    // TODO mutex cleanup needed
+//    static pthread_mutex_t_ptr _native_thread_list_mutex = VMHelpers.create_recursive_pthread();
+
+//    @extern
+//    public static native int putchar(int arg);
+
+    /* TODO comment - return false if failed */
+    static boolean addToNativeThreadList(java.lang.Thread threadObject, pthread_t_ptr pthread) {
+        //pthread_mutex_lock(_native_thread_list_mutex);
+
+        // TODO move to VMHelpers for now - classloading issues
+        ptr<?> nativeThreadPtrVoid = malloc(sizeof(native_thread_ptr.class));
+        if (nativeThreadPtrVoid.isNull()) {
+            return false;
+        }
+        ptr<native_thread> newNativeThreadPtr = (ptr<native_thread>) castPtr(nativeThreadPtrVoid, native_thread.class);
+
+        native_thread newNativeThread = newNativeThreadPtr.deref();
+
+        newNativeThread.test = 3;
+        VMHelpers.printInt(newNativeThread.test);
+
+        newNativeThread.threadObject = threadObject;
+        newNativeThread.pthread = pthread;
+//
+//        if (_native_thread_list == null) {
+//            putchar('T');
+//            newNativeThread.next = (native_thread_ptr) newNativeThreadPtr;
+//            _native_thread_list = (native_thread_ptr) newNativeThreadPtr;
+//        } else {
+//            native_thread_ptr lastEntryPtr = _native_thread_list;
+//            native_thread lastEntry = lastEntryPtr.deref();
+//            while (lastEntry.next != _native_thread_list) {
+//                putchar('T');
+//                lastEntryPtr = lastEntry.next;
+//                lastEntry = lastEntryPtr.deref();
+//            }
+//            newNativeThread.next = lastEntry.next;
+//            lastEntry.next = (native_thread_ptr) newNativeThreadPtr;
+//            putchar('T');
+//
+//        }
+        //pthread_mutex_unlock(_native_thread_list_mutex);
+        return true;
+    }
+
+
 
     // Temporary manual implementation
     @SuppressWarnings("ManualArrayCopy")

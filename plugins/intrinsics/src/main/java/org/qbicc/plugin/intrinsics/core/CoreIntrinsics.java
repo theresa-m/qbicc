@@ -423,6 +423,7 @@ public final class CoreIntrinsics {
         ClassTypeDescriptor pthreadPtrDesc = ClassTypeDescriptor.synthesize(classContext, "org/qbicc/runtime/posix/PThread$pthread_t_ptr");
         ClassTypeDescriptor voidPtrDesc = ClassTypeDescriptor.synthesize(classContext, "org/qbicc/runtime/CNative$void_ptr");
         ClassTypeDescriptor voidUnaryfunctionPtrDesc = ClassTypeDescriptor.synthesize(classContext, "org/qbicc/runtime/CNative$void_ptr_unaryoperator_function_ptr");
+        ClassTypeDescriptor vmDesc = ClassTypeDescriptor.synthesize(classContext, "org/qbicc/runtime/main/VM");
 
         MethodDescriptor returnJlt = MethodDescriptor.synthesize(classContext, jltDesc, List.of());
         MethodDescriptor voidDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.V, List.of());
@@ -440,13 +441,11 @@ public final class CoreIntrinsics {
         intrinsics.registerIntrinsic(jltDesc, "currentThread", returnJlt, currentThread);
 
         /* VMHelpers.java - threadWrapper: helper method for java.lang.Thread.start0 */
+        LoadedTypeDefinition jltVal = classContext.findDefinedType("java/lang/Thread").load();
+        ValueType jltType = jltVal.getType().getReference();
         MethodDescriptor threadWrapperNativeDesc = MethodDescriptor.synthesize(classContext, voidPtrDesc, List.of(voidPtrDesc));
         StaticIntrinsic threadWrapperNative = (builder, target, arguments) -> {
             Value threadVoidPtr = arguments.get(0);
-
-            DefinedTypeDefinition jlt = classContext.findDefinedType("java/lang/Thread");
-            LoadedTypeDefinition jltVal = jlt.load();
-            ValueType jltType = jltVal.getType().getReference();
             Value threadObject = builder.bitCast(threadVoidPtr, (WordType)jltType);
             ValueHandle threadObjectHandle = builder.referenceHandle(threadObject);
 
@@ -469,8 +468,14 @@ public final class CoreIntrinsics {
         /* VMHelpers.java - saveNativeThread: helper method for java.lang.Thread.start0 */
         MethodDescriptor saveNativeThreadDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, List.of(voidPtrDesc, pthreadPtrDesc));
         StaticIntrinsic saveNativeThread = (builder, target, arguments) -> {
-            // TODO implement
-            return ctxt.getLiteralFactory().literalOf(true);
+            Value threadVoidPtr = arguments.get(0);
+            Value threadObject = builder.bitCast(threadVoidPtr, (WordType)jltType);
+            Value pthread = arguments.get(1);
+
+            MethodDescriptor vmAddToNativeThreadListDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, List.of(jltDesc, pthreadPtrDesc));
+            ValueHandle vmAddToNativeThreadList = builder.staticMethod(vmDesc, "addToNativeThreadList", vmAddToNativeThreadListDesc);
+            return builder.call(vmAddToNativeThreadList, List.of(threadObject, pthread));
+            //return ctxt.getLiteralFactory().literalOf(true);
         };
         intrinsics.registerIntrinsic(vmHelpersDesc, "saveNativeThread", saveNativeThreadDesc, saveNativeThread);
 

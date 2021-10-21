@@ -761,6 +761,8 @@ public final class CoreIntrinsics {
             if (value instanceof Load) {
                 Load load = (Load) value;
                 return builder.addressOf(load.getValueHandle());
+            } else if (value.getType() instanceof PointerType) {
+                return value;
             } else {
                 ctxt.error(builder.getLocation(), "Cannot take address of value");
                 return ctxt.getLiteralFactory().zeroInitializerLiteralOfType(value.getType().getPointer());
@@ -829,12 +831,9 @@ public final class CoreIntrinsics {
         intrinsics.registerIntrinsic(wordDesc, "isZero", MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, List.of()), isZero);
         intrinsics.registerIntrinsic(wordDesc, "isNull", MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, List.of()), isZero);
 
-        InstanceIntrinsic deref = (builder, instance, target, arguments) -> builder.load(builder.pointerHandle(instance), MemoryAtomicityMode.NONE);
+        InstanceIntrinsic identity = (builder, instance, target, arguments) ->  instance;
 
-        intrinsics.registerIntrinsic(ptrDesc, "deref", MethodDescriptor.synthesize(classContext, nObjDesc, List.of()), deref);
-
-        InstanceIntrinsic identity = (builder, instance, target, arguments) -> instance;
-
+        intrinsics.registerIntrinsic(ptrDesc, "deref", MethodDescriptor.synthesize(classContext, nObjDesc, List.of()), identity);
         intrinsics.registerIntrinsic(ptrDesc, "asArray", MethodDescriptor.synthesize(classContext, ArrayTypeDescriptor.of(classContext, nObjDesc), List.of()), identity);
 
         InstanceIntrinsic get = (builder, instance, target, arguments) ->

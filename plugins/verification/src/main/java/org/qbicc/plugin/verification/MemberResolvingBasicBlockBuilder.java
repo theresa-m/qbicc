@@ -11,6 +11,8 @@ import org.qbicc.graph.BasicBlockBuilder;
 import org.qbicc.graph.BlockEarlyTermination;
 import org.qbicc.graph.CheckCast;
 import org.qbicc.graph.DelegatingBasicBlockBuilder;
+import org.qbicc.graph.Load;
+import org.qbicc.graph.MemoryAtomicityMode;
 import org.qbicc.graph.Value;
 import org.qbicc.graph.ValueHandle;
 import org.qbicc.graph.literal.ConstantLiteral;
@@ -26,6 +28,7 @@ import org.qbicc.type.ObjectType;
 import org.qbicc.type.PointerType;
 import org.qbicc.type.ReferenceArrayObjectType;
 import org.qbicc.type.ReferenceType;
+import org.qbicc.type.UnsignedIntegerType;
 import org.qbicc.type.ValueType;
 import org.qbicc.type.WordType;
 import org.qbicc.type.annotation.type.TypeAnnotationList;
@@ -150,12 +153,21 @@ public class MemberResolvingBasicBlockBuilder extends DelegatingBasicBlockBuilde
         ClassContext cc = getClassContext();
         // it is present else {@link org.qbicc.plugin.verification.ClassLoadingBasicBlockBuilder} would have failed
         ValueType castType = cc.resolveTypeFromDescriptor(desc, TypeParameterContext.of(getCurrentElement()), TypeSignature.synthesize(cc, desc), TypeAnnotationList.empty(), TypeAnnotationList.empty());
+        ValueType valueType = value.getType();
         if (value instanceof ConstantLiteral) {
             // it may be something we can't really cast.
             return ctxt.getLiteralFactory().constantLiteralOfType(castType);
         } else if (value instanceof UndefinedLiteral) {
             // it may be something we can't really cast.
             return ctxt.getLiteralFactory().undefinedLiteralOfType(castType);
+        } else if (valueType instanceof PointerType && ((PointerType)valueType).getPointeeType().equals(castType)) {
+            if (castType instanceof CompoundType) {
+                /* for compound types or arrays do nothing to dereference. */
+                //return ctxt.getLiteralFactory().zeroInitializerLiteralOfType(castType);
+                return value;
+            } else {
+                return super.load(super.pointerHandle(value), MemoryAtomicityMode.UNORDERED);
+            }
         } else if (castType instanceof ObjectType) {
             ReferenceType refType = ((ObjectType)castType).getReference();
             ObjectType toType = refType.getUpperBound();

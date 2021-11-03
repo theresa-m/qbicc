@@ -11,6 +11,7 @@ import org.qbicc.graph.BasicBlockBuilder;
 import org.qbicc.graph.BlockEarlyTermination;
 import org.qbicc.graph.CheckCast;
 import org.qbicc.graph.DelegatingBasicBlockBuilder;
+import org.qbicc.graph.Deref;
 import org.qbicc.graph.MemoryAtomicityMode;
 import org.qbicc.graph.Value;
 import org.qbicc.graph.ValueHandle;
@@ -206,13 +207,8 @@ public class MemberResolvingBasicBlockBuilder extends DelegatingBasicBlockBuilde
         } else if (value instanceof UndefinedLiteral) {
             // it may be something we can't really cast.
             return ctxt.getLiteralFactory().undefinedLiteralOfType(castType);
-        } else if (value.getType() instanceof PointerType pt && castType.equals(pt.getPointeeType())) {
-            /* Pointer<x> -> x */
-            if (castType instanceof CompoundType) {
-                return super.deref(value);
-            } else {
-                return super.load(super.pointerHandle(value), MemoryAtomicityMode.UNORDERED);
-            }
+        } else if (value instanceof Deref) {
+            return value;
         } else if (castType instanceof ObjectType) {
             ObjectType originalToType = (ObjectType) castType;
             ObjectType toType = originalToType;

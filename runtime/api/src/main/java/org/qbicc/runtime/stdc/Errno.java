@@ -1,6 +1,7 @@
 package org.qbicc.runtime.stdc;
 
 import static org.qbicc.runtime.CNative.*;
+import static org.qbicc.runtime.CNative.ptr.*;
 
 import org.qbicc.runtime.patcher.AccessWith;
 import org.qbicc.runtime.patcher.Accessor;
@@ -25,7 +26,7 @@ public final class Errno {
         private static native int_ptr __errno_location();
 
         public c_int get() {
-            return __errno_location().deref();
+            return deref(__errno_location());
         }
 
         public void set(c_int value) {
@@ -37,7 +38,7 @@ public final class Errno {
         private static native int_ptr __error();
 
         public c_int get() {
-            return __error().deref();
+            return deref(__error());
         }
 
         public void set(c_int value) {
@@ -49,7 +50,7 @@ public final class Errno {
         private static native int_ptr _Errno();
 
         public c_int get() {
-            return _Errno().deref();
+            return deref(_Errno());
         }
 
         public void set(c_int value) {

@@ -1,21 +1,34 @@
 package org.qbicc.graph;
 
+import org.qbicc.type.PointerType;
 import org.qbicc.type.ValueType;
 import org.qbicc.type.definition.element.ExecutableElement;
 
 /**
- * Wraps a CompoundType value which cannot be directly dereferenced. If this node is lowered an error will be thrown.
+ * Wraps a dereferenced pointer. If this node is not removed by block in the program it will be replaced by a load.
  */
+
+// TODO still unary value?
 public final class Deref extends AbstractValue implements UnaryValue {
     private final Value value;
+    private final PointerHandle handle;
+    private final ValueType toType;
 
-    Deref(Node callSite, ExecutableElement element, int line, int bci, Value value) {
+    Deref(Node callSite, ExecutableElement element, int line, int bci, ValueHandle handle) {
         super(callSite, element, line, bci);
-        this.value = value;
+        this.handle = (PointerHandle)handle;
+        this.value = ((PointerHandle) handle).getPointerValue();
+
+        PointerType pt = (PointerType)value.getType();
+        this.toType = pt.getPointeeType();
     }
 
     public Value getInput() {
         return value;
+    }
+
+    public ValueHandle getValueHandle() {
+        return handle;
     }
 
     int calcHashCode() {
@@ -36,8 +49,12 @@ public final class Deref extends AbstractValue implements UnaryValue {
     }
 
     public ValueType getType() {
-        return value.getType();
+        return toType;
     }
+
+//    public Load getLoad() {
+//        return load;
+//    }
 
     public <T, R> R accept(final ValueVisitor<T, R> visitor, final T param) {
         return visitor.visit(param, this);

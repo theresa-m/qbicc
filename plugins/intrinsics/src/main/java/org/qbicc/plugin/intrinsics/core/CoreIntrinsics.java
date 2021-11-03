@@ -17,6 +17,7 @@ import org.qbicc.graph.BlockEntry;
 import org.qbicc.graph.BlockLabel;
 import org.qbicc.graph.ClassOf;
 import org.qbicc.graph.CmpAndSwap;
+import org.qbicc.graph.Deref;
 import org.qbicc.graph.Extend;
 import org.qbicc.graph.Load;
 import org.qbicc.graph.LocalVariable;
@@ -878,6 +879,8 @@ public final class CoreIntrinsics {
             if (value instanceof Load) {
                 Load load = (Load) value;
                 return builder.addressOf(load.getValueHandle());
+            } else if (value instanceof Deref deref) {
+                return deref.getInput();
             } else {
                 ctxt.error(builder.getLocation(), "Cannot take address of value");
                 return ctxt.getLiteralFactory().zeroInitializerLiteralOfType(value.getType().getPointer());
@@ -948,8 +951,10 @@ public final class CoreIntrinsics {
 
         InstanceIntrinsic identity = (builder, instance, target, arguments) -> instance;
 
-        intrinsics.registerIntrinsic(ptrDesc, "deref", MethodDescriptor.synthesize(classContext, nObjDesc, List.of()), identity);
         intrinsics.registerIntrinsic(ptrDesc, "asArray", MethodDescriptor.synthesize(classContext, ArrayTypeDescriptor.of(classContext, nObjDesc), List.of()), identity);
+
+        StaticIntrinsic deref = (builder, target, arguments) -> builder.deref(builder.pointerHandle(arguments.get(0)));
+        intrinsics.registerIntrinsic(ptrDesc, "deref", MethodDescriptor.synthesize(classContext, nObjDesc, List.of(ptrDesc)), deref);
 
         InstanceIntrinsic get = (builder, instance, target, arguments) ->
             builder.load(builder.elementOf(builder.pointerHandle(instance), arguments.get(0)), MemoryAtomicityMode.NONE);

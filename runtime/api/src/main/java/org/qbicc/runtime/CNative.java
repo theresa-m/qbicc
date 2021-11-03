@@ -815,12 +815,10 @@ public final class CNative {
          * Dereference the pointer, returning what the pointer points to. This operation
          * does not necessarily directly translate to a physical memory operation.
          *
-         * Pointers to structure types cannot be dereferenced, but members can be accessed as structPtr.deref().member
-         * which would be represented in C as structPtr->member.
          *
          * @return the pointed-to value
          */
-        public native T deref();
+        public static native <T extends object, P extends ptr<T>> T deref(ptr<T> obj);
 
         /**
          * Overwrite the value that is pointed to by this pointer.
@@ -852,7 +850,7 @@ public final class CNative {
          * @return the value
          */
         public T get(int arrayIdx) {
-            return plus(arrayIdx).deref();
+            return deref(plus(arrayIdx));
         }
 
         public void set(int arrayIdx, T newVal) {

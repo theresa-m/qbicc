@@ -3,6 +3,7 @@ package org.qbicc.plugin.native_;
 import org.qbicc.context.CompilationContext;
 import org.qbicc.graph.BasicBlockBuilder;
 import org.qbicc.graph.DelegatingBasicBlockBuilder;
+import org.qbicc.graph.Deref;
 import org.qbicc.graph.Value;
 import org.qbicc.graph.ValueHandle;
 import org.qbicc.type.CompoundType;
@@ -19,6 +20,9 @@ public class StructMemberAccessBasicBlockBuilder extends DelegatingBasicBlockBui
 
     public ValueHandle referenceHandle(Value reference) {
         if (reference.getType() instanceof CompoundType) {
+            if (reference instanceof Deref d) {
+                d.setIsMemberAccess();
+            }
             return reference.getValueHandle();
         }
         return super.referenceHandle(reference);

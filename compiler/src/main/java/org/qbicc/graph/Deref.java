@@ -10,21 +10,35 @@ import org.qbicc.type.definition.element.ExecutableElement;
 
 // TODO still unary value?
 public final class Deref extends AbstractValue implements UnaryValue {
-    private final Value value;
+    private final Load load;
     private final PointerHandle handle;
+    private final Value value;
     private final ValueType toType;
+    private boolean isMemberAccess;
 
-    Deref(Node callSite, ExecutableElement element, int line, int bci, ValueHandle handle) {
+
+    Deref(Node callSite, ExecutableElement element, int line, int bci, Value load) {
         super(callSite, element, line, bci);
-        this.handle = (PointerHandle)handle;
-        this.value = ((PointerHandle) handle).getPointerValue();
+        this.load = (Load)load;
+        this.handle = (PointerHandle)load.getValueHandle();
+        this.value = handle.getPointerValue();
 
         PointerType pt = (PointerType)value.getType();
         this.toType = pt.getPointeeType();
+        this.isMemberAccess = false;
+    }
+
+    public void setIsMemberAccess() {
+        isMemberAccess = true;
     }
 
     public Value getInput() {
-        return value;
+        /* load is not required if this is just a member access */
+        if (isMemberAccess) {
+            return value;
+        } else {
+            return load;
+        }
     }
 
     public ValueHandle getValueHandle() {
@@ -45,16 +59,12 @@ public final class Deref extends AbstractValue implements UnaryValue {
     }
 
     public boolean equals(final Deref other) {
-        return this == other || other != null && value.equals(other.value);
+        return this == other || other != null && load.equals(other.load);
     }
 
     public ValueType getType() {
         return toType;
     }
-
-//    public Load getLoad() {
-//        return load;
-//    }
 
     public <T, R> R accept(final ValueVisitor<T, R> visitor, final T param) {
         return visitor.visit(param, this);

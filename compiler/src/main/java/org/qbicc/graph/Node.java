@@ -872,7 +872,7 @@ public interface Node {
             }
 
             public Value visit(final Copier param, final Deref node) {
-                return param.getBlockBuilder().deref(param.copyValueHandle(node.getValueHandle()));
+                return param.getBlockBuilder().deref(param.copyValue(node.getInput()));
             }
         }
     }

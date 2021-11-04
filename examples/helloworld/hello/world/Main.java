@@ -31,7 +31,7 @@ public class Main {
     }
 
     public static void main(String[] args) {
-       // uint32_t pointerToIntDerefTestResult = pointerToIntDerefTest();
+        uint32_t pointerToIntDerefTestResult = pointerToIntDerefTest();
         int pointerToStructMemberTestResult = pointerToStructMemberTest();
         //int pointerToStructMemberTest2Result = pointerToStructMemberTest2();
         //test_struct pointerToStructDerefTestResult = pointerToStructDerefTest();

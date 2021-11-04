@@ -953,7 +953,13 @@ public final class CoreIntrinsics {
 
         intrinsics.registerIntrinsic(ptrDesc, "asArray", MethodDescriptor.synthesize(classContext, ArrayTypeDescriptor.of(classContext, nObjDesc), List.of()), identity);
 
-        StaticIntrinsic deref = (builder, target, arguments) -> builder.deref(builder.pointerHandle(arguments.get(0)));
+        StaticIntrinsic deref = (builder, target, arguments) -> {
+            MemoryAtomicityMode mode = MemoryAtomicityMode.UNORDERED;
+            if (arguments.get(0).getType() instanceof PointerType pt && pt.getPointeeType() instanceof CompoundType) {
+                mode = MemoryAtomicityMode.NONE;
+            }
+            return builder.deref(builder.load(builder.pointerHandle(arguments.get(0)), mode));
+        };
         intrinsics.registerIntrinsic(ptrDesc, "deref", MethodDescriptor.synthesize(classContext, nObjDesc, List.of(ptrDesc)), deref);
 
         InstanceIntrinsic get = (builder, instance, target, arguments) ->

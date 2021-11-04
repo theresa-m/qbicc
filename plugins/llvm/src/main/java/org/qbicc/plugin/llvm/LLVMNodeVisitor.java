@@ -709,6 +709,11 @@ final class LLVMNodeVisitor implements NodeVisitor<Void, LLValue, Instruction, I
     }
 
     public LLValue visit(final Void param, final Deref node) {
+        if (node.getInput() instanceof Load l) {
+            return visit(param, l);
+        } else if (node.getInput() instanceof BitCast bc) {
+            return visit(param, bc);
+        }
         ctxt.error(node.getElement(), "Invalid dereference of %s", node.getInput().getType());
         return null;
     }

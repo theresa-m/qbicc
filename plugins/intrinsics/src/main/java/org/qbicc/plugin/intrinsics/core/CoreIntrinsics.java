@@ -880,6 +880,7 @@ public final class CoreIntrinsics {
                 Load load = (Load) value;
                 return builder.addressOf(load.getValueHandle());
             } else if (value instanceof Deref deref) {
+                deref.setIsMemberAccess();
                 return deref.getInput();
             } else {
                 ctxt.error(builder.getLocation(), "Cannot take address of value");

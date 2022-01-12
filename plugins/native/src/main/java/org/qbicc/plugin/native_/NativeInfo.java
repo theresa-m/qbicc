@@ -113,6 +113,7 @@ final class NativeInfo {
                 if (resolved == null) {
                     LoadedTypeDefinition validated = definedType.load();
                     ref.set(NativeLayout.get(ctxt).getLayoutInfo(validated));
+                    resolved = ref.get();
                 }
             }
         }

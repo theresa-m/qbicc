@@ -16,7 +16,10 @@ package hello.world;
  */
 public class Main {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Throwable {
+        Thread t = new Thread();
+        t.start();
+        t.join();
         System.out.println("hello world");
     }
 }

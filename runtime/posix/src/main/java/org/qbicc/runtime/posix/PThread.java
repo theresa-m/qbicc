@@ -71,6 +71,14 @@ public final class PThread {
     public static final class pthread_condattr_t_ptr_const_ptr extends ptr<@c_const pthread_condattr_t_ptr> {}
     public static final class const_pthread_condattr_t_ptr_const_ptr extends ptr<@c_const const_pthread_condattr_t_ptr> {}
 
+    @internal
+    public static final class native_thread extends object {
+        public void_ptr threadObjectPtr; /* java.lang.Thread */
+        public pthread_t_ptr pthread;
+        public ptr<?> next; /* ptr<native_thread> */
+    }
+    public static final class native_thread_ptr extends ptr<native_thread> {}
+
     public static native c_int pthread_attr_init(pthread_attr_t_ptr attr);
     public static native c_int pthread_attr_destroy(pthread_attr_t_ptr attr);
 

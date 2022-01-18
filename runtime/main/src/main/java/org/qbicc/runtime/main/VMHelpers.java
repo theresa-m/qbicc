@@ -123,6 +123,48 @@ public final class VMHelpers {
         return getClassFromTypeid(superTypeId, dims);
     }
 
+    static pthread_mutex_t_ptr create_recursive_pthread() {
+        ptr<?> attrVoid = malloc(sizeof(pthread_mutexattr_t.class));
+        if (attrVoid.isNull()) {
+            throw new OutOfMemoryError(/*"Allocation failed"*/);
+        }
+        /* free attribute on success or failure, it won't be needed past mutex creation */
+        try {
+            ptr<pthread_mutexattr_t> attr = (ptr<pthread_mutexattr_t>) castPtr(attrVoid, pthread_mutexattr_t.class);
+
+            int result = pthread_mutexattr_init((pthread_mutexattr_t_ptr) attr).intValue();
+            if (0 != result) {
+                throw new IllegalMonitorStateException("error code: " + result);
+            }
+            /* destroy attribute on success or failure, it won't be needed past mutex creation */
+            try {
+                result = pthread_mutexattr_settype((pthread_mutexattr_t_ptr) attr, PTHREAD_MUTEX_RECURSIVE).intValue();
+                if (0 != result) {
+                    throw new IllegalMonitorStateException("error code: " + result);
+                }
+
+                Stddef.size_t mutexSize = sizeof(pthread_mutex_t.class);
+                ptr<?> mVoid = malloc(word(mutexSize.longValue()));
+                if (mVoid.isNull()) {
+                    throw new OutOfMemoryError(/*"Allocation failed"*/);
+                }
+
+                ptr<pthread_mutex_t> m = (ptr<pthread_mutex_t>) castPtr(mVoid, pthread_mutex_t.class);
+                result = pthread_mutex_init((pthread_mutex_t_ptr) m, (const_pthread_mutexattr_t_ptr) attr).intValue();
+                if (0 != result) {
+                    free(mVoid);
+                    throw new IllegalMonitorStateException("error code: " + result);
+                }
+
+                return (pthread_mutex_t_ptr) m;
+            } finally {
+                pthread_mutexattr_destroy((pthread_mutexattr_t_ptr) attr);
+            }
+        } finally {
+            free(attrVoid);
+        }
+    }
+
     @Hidden
     @Inline(InlineCondition.NEVER)
     static void monitorEnter(Object object) throws IllegalMonitorStateException {
@@ -134,51 +176,13 @@ public final class VMHelpers {
         }
         pthread_mutex_t_ptr nom = CompilerIntrinsics.getNativeObjectMonitor(object);
         if (nom == null) {
-            ptr<?> attrVoid = malloc(sizeof(pthread_mutexattr_t.class));
-            if (attrVoid.isNull()) {
-                throw new OutOfMemoryError(/*"Allocation failed"*/);
-            }
+            nom = create_recursive_pthread();
 
-            /* free attribute on success or failure, it won't be needed past mutex creation */
-            try {
-                ptr<pthread_mutexattr_t> attr = (ptr<pthread_mutexattr_t>) castPtr(attrVoid, pthread_mutexattr_t.class);
-
-                result = pthread_mutexattr_init((pthread_mutexattr_t_ptr) attr).intValue();
-                if (0 != result) {
-                    throw new IllegalMonitorStateException("error code: " + result);
-                }
-                /* destroy attribute on success or failure, it won't be needed past mutex creation */
-                try {
-                    result = pthread_mutexattr_settype((pthread_mutexattr_t_ptr) attr, PTHREAD_MUTEX_RECURSIVE).intValue();
-                    if (0 != result) {
-                        throw new IllegalMonitorStateException("error code: " + result);
-                    }
-
-                    Stddef.size_t mutexSize = sizeof(pthread_mutex_t.class);
-                    ptr<?> mVoid = malloc(word(mutexSize.longValue()));
-                    if (mVoid.isNull()) {
-                        throw new OutOfMemoryError(/*"Allocation failed"*/);
-                    }
-
-                    ptr<pthread_mutex_t> m = (ptr<pthread_mutex_t>) castPtr(mVoid, pthread_mutex_t.class);
-                    result = pthread_mutex_init((pthread_mutex_t_ptr) m, (const_pthread_mutexattr_t_ptr) attr).intValue();
-                    if (0 != result) {
-                        free(mVoid);
-                        throw new IllegalMonitorStateException("error code: " + result);
-                    }
-
-                    nom = (pthread_mutex_t_ptr) m;
-                    if (!CompilerIntrinsics.setNativeObjectMonitor(object, nom)) {
-                        /* atomic assignment failed, mutex has already been initialized for object. */
-                        pthread_mutex_destroy(nom);
-                        free(mVoid);
-                        nom = CompilerIntrinsics.getNativeObjectMonitor(object);
-                    }
-                } finally {
-                    pthread_mutexattr_destroy((pthread_mutexattr_t_ptr) attr);
-                }
-            } finally {
-                free(attrVoid);
+            if (!CompilerIntrinsics.setNativeObjectMonitor(object, nom)) {
+                /* atomic assignment failed, mutex has already been initialized for object. */
+                pthread_mutex_destroy(nom);
+                //free(castPtr(nom, ptr.class));
+                nom = CompilerIntrinsics.getNativeObjectMonitor(object);
             }
         }
         result = pthread_mutex_lock(nom).intValue();
@@ -612,6 +616,8 @@ public final class VMHelpers {
             throw new OutOfMemoryError();
         }
 
+        // TODO pass the Native thread element instead as a level of indirection to protect from GC
+        // TODO so pass to here as a Thread, saveNAtiveThread should return native element as a void pointer
         int result = pthread_create((pthread_t_ptr) pthreadPtr, (const_pthread_attr_t_ptr)null, runFuncPtr, thread).intValue();
         if (0 != result) {
             free(pthreadVoid);

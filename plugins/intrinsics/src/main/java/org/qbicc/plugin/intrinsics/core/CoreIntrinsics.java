@@ -601,8 +601,12 @@ public final class CoreIntrinsics {
         /* VMHelpers.java - saveNativeThread: helper method for java.lang.Thread.start0 */
         MethodDescriptor saveNativeThreadDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, List.of(voidPtrDesc, pthreadPtrDesc));
         StaticIntrinsic saveNativeThread = (builder, target, arguments) -> {
-            // TODO implement
-            return ctxt.getLiteralFactory().literalOf(true);
+            Value threadVoidPtr = arguments.get(0);
+            Value pthread = arguments.get(1);
+
+            MethodDescriptor vmAddToNativeThreadListDesc = MethodDescriptor.synthesize(classContext, BaseTypeDescriptor.Z, List.of(voidPtrDesc, pthreadPtrDesc));
+            ValueHandle vmAddToNativeThreadList = builder.staticMethod(vmDesc, "addToNativeThreadList", vmAddToNativeThreadListDesc);
+            return builder.call(vmAddToNativeThreadList, List.of(threadVoidPtr, pthread));
         };
         intrinsics.registerIntrinsic(compIntrDesc, "saveNativeThread", saveNativeThreadDesc, saveNativeThread);
 
